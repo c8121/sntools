@@ -2,17 +2,47 @@
 #include <stdlib.h>
 #include <sysexits.h>
 #include <string.h>
+#include <unistd.h>
 
-char *arpScanCommand = "/usr/sbin/arp-scan --interface=wlo1 --localnet -x";
+char *arpScanCommand = "/usr/sbin/arp-scan --interface=%s --localnet -x";
+char *interface = NULL;
 
+/**
+ *
+ */
+void configure(int argc, char *argv[]) {
 
+    const char *options = "i:";
+    int c;
+
+    while ((c = getopt(argc, argv, options)) != -1) {
+        switch(c) {
+            case 'i':
+                interface = optarg;
+                printf("Select interface: %s\n", optarg);
+                break;
+        }
+    }
+
+}
+
+/**
+*
+*/
 int main(int argc, char *argv[]) {
 
-	printf("%s\n", arpScanCommand);
-	
-	FILE *cmd = popen(arpScanCommand, "r");
+    configure(argc, argv);
+    if( interface == NULL ) {
+        fprintf(stderr, "Please select an interdace (-i)\n");
+        exit(EX_USAGE);
+    }
+
+    char *cmdString = malloc(strlen(arpScanCommand)+32);
+    sprintf(cmdString, arpScanCommand, interface);
+
+	FILE *cmd = popen(cmdString, "r");
 	if( cmd == NULL ) {
-		fprintf(stderr, "Failed to execute: %s", arpScanCommand);
+		fprintf(stderr, "Failed to execute: %s", cmdString);
 		exit(EX_IOERR);
 	}
 	
@@ -35,7 +65,7 @@ int main(int argc, char *argv[]) {
 	if( feof(cmd) ) {
 		pclose(cmd);
 	} else {
-		fprintf(stderr, "Broken pipe: %s", arpScanCommand);
+		fprintf(stderr, "Broken pipe: %s", cmdString);
 	}
 
 }
