@@ -16,7 +16,7 @@
 /**
  * Author: christian c8121 de
  */
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sysexits.h>
@@ -36,7 +36,7 @@ char *interface = NULL;
 int resolveIpAddress(char *ip, char *resolvedName, int size) {
 
     struct sockaddr_in sa;
-    char service[20];
+    char service[NI_MAXSERV];
 
     sa.sin_family = AF_INET;
 
@@ -54,7 +54,7 @@ int resolveIpAddress(char *ip, char *resolvedName, int size) {
 }
 
 /**
- *
+ * Read command line arguments and configure application
  */
 void configure(int argc, char *argv[]) {
 
@@ -73,7 +73,9 @@ void configure(int argc, char *argv[]) {
 }
 
 /**
-*
+* Launches arp-scan, reads IP and MAC, resolves hostnames
+* CLI Arguments:
+*   -i <interface name>
 */
 int main(int argc, char *argv[]) {
 
@@ -105,7 +107,7 @@ int main(int argc, char *argv[]) {
 		char mac[strlen(tok)+1];
 		strcpy(mac, tok);
 
-		char hostname[1024];
+		char hostname[NI_MAXHOST];
 		resolveIpAddress(ip, hostname, sizeof(hostname));
 
 		printf("IP: %s, MAC: %s, Name: %s\n", ip, mac, hostname);
