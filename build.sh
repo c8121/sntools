@@ -27,3 +27,4 @@ fi
 echo "Build arp-scan-util"
 cd $BASE
 gcc -Wall -I./lib/liblmdb -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c" -llmdb
+gcc -Wall -I./lib/liblmdb -o "$binDir/arp-history" "$sourceDir/arp-history.c" -llmdb
