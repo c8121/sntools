@@ -27,17 +27,11 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-#include "lmdb.h"
+#include "mdb.c"
 
 char *arpScanCommand = "/usr/sbin/arp-scan --interface=%s --localnet -x";
 char *interface = NULL;
 
-char *mdbDataDir = "/var/spool/sntools";
-mode_t mdbDataMode = 0664;
-
-MDB_env *mdbEnv;
-MDB_txn *mdbTxn;
-MDB_dbi mdbDbi;
 
 /**
 * Resolve IP to Hostname
@@ -63,83 +57,6 @@ int resolveIpAddress(char *ip, char *resolvedName, int size) {
     }
 }
 
-/**
-* Create LMDB resources
-* @return 0 on success
-*/
-int prepareMdb() {
-	
-    if( mdb_env_create(&mdbEnv) != MDB_SUCCESS ) {
-        fprintf(stderr, "Failed to create LMDB environment");
-        return 1;
-    }
-    
-    if( mdb_env_open(mdbEnv, mdbDataDir, 0, mdbDataMode) != MDB_SUCCESS ) {
-        mdb_env_close(mdbEnv);
-        fprintf(stderr, "Failed to open LMDB environment");
-        return 1;
-    }
-    
-    if( mdb_txn_begin(mdbEnv, NULL, 0, &mdbTxn) != MDB_SUCCESS ) {
-        mdb_env_close(mdbEnv);
-        fprintf(stderr, "Failed to begin LMDB transaction");
-        return 1;
-    }
-    
-    if( mdb_dbi_open(mdbTxn, NULL, 0, &mdbDbi) != MDB_SUCCESS ) {
-        mdb_txn_abort(mdbTxn);
-        mdb_env_close(mdbEnv);
-        fprintf(stderr, "Failed to open LMDB database");
-        return 1;
-    }
-    
-	return 0;
-
-}
-
-/**
-*
-*/
-void closeMdb() {
-
-    if( mdb_txn_commit(mdbTxn) != MDB_SUCCESS ) {
-        fprintf(stderr, "Failed to commit LMDB transaction");
-    }
-    
-    mdb_dbi_close(mdbEnv, mdbDbi);
-    mdb_env_close(mdbEnv);
-
-}
-
-/**
-*
-*/
-int getMdb(char *key, MDB_val *value) {
-
-    MDB_val key_val;
-    key_val.mv_size = strlen(key)+1;
-    key_val.mv_data = key;
-    
-    return mdb_get(mdbTxn, mdbDbi, &key_val, value);
-}
-
-/**
-*
-*/
-void putMdb(char *key, char *value) {
-
-    MDB_val key_val;
-    key_val.mv_size = strlen(key)+1;
-    key_val.mv_data = key;
-    
-    MDB_val data_val;
-    data_val.mv_size = strlen(value)+1;
-    data_val.mv_data = value;
-    
-    if( mdb_put(mdbTxn, mdbDbi, &key_val, &data_val, 0) != MDB_SUCCESS ) {
-        fprintf(stderr, "Failed to store key %s", key);
-    }
-}
 
 
 /**
@@ -162,18 +79,6 @@ void configure(int argc, char *argv[]) {
                 break;
         }
     }
-    
-    // -- Check/create data dir -----
-    
-    struct stat fileStat;
-    if( stat(mdbDataDir, &fileStat) != 0 ) {
-        printf("Create data directory: %s", mdbDataDir);
-        if( mkdir(mdbDataDir, mdbDataMode) != 0 ) {
-            fprintf(stderr, "Failed to create %s", mdbDataDir);
-        }
-    }
-        
-
 }
 
 /**
