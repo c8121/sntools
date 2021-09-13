@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <time.h>
 
 #include "mdb.c"
 
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]) {
         exit(EX_IOERR);   
     }
 
-    char *cmdString = malloc(strlen(arpScanCommand)+32);
+    char cmdString[strlen(arpScanCommand)+32];
     sprintf(cmdString, arpScanCommand, interface);
 
 	FILE *cmd = popen(cmdString, "r");
@@ -157,6 +158,16 @@ int main(int argc, char *argv[]) {
 		
 		putMdb(ip, hostname);
 		putMdb(mac, hostname);
+		
+		
+		char ts[32];
+		sprintf(ts, "%ld", (time_t)time(NULL));
+		
+		char tsKey[64];
+		sprintf(tsKey, "%s_ts", ip);
+		putMdb(tsKey, ts);
+		sprintf(tsKey, "%s_ts", mac);
+		putMdb(tsKey, ts);
 		
 	}
 	
