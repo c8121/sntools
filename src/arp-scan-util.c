@@ -26,8 +26,16 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include "lmdb.h"
+
 char *arpScanCommand = "/usr/sbin/arp-scan --interface=%s --localnet -x";
 char *interface = NULL;
+
+char *mdbDataDir = "/tmp";
+
+MDB_env *mdbEnv;
+MDB_dbi *mdbDbi;
+MDB_txn *mdbTxn;
 
 /**
 * Resolve IP to Hostname
@@ -52,6 +60,27 @@ int resolveIpAddress(char *ip, char *resolvedName, int size) {
         return 0;
     }
 }
+
+/**
+*
+*/
+int prepareMdb() {
+	
+    if( mdb_env_create(&mdbEnv) != MDB_SUCCESS ) {
+        fprintf(stderr, "Failed to create LMDB environment");
+        return 1;
+    }
+    
+    if( mdb_env_open(mdbEnv, mdbDataDir, 0, 0664) != MDB_SUCCESS ) {
+        mdb_env_close(mdbEnv);
+        fprintf(stderr, "Failed to open LMDB environment");
+        return 1;
+    }
+    
+	return 0;
+
+}
+
 
 /**
  * Read command line arguments and configure application
@@ -83,6 +112,10 @@ int main(int argc, char *argv[]) {
     if( interface == NULL ) {
         fprintf(stderr, "Please select an interdace (-i)\n");
         exit(EX_USAGE);
+    }
+
+    if( prepareMdb() != 0 ) {
+        exit(EX_IOERR);   
     }
 
     char *cmdString = malloc(strlen(arpScanCommand)+32);

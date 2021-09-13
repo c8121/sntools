@@ -19,4 +19,4 @@ fi
 
 
 echo "Build arp-scan-util"
-gcc -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c"
+gcc -Wall -I./lib/liblmdb/ -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c" 
