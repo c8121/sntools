@@ -20,7 +20,7 @@
 #include "lmdb.h"
 
 char *mdbDataDir = "/var/spool/sntools";
-mode_t mdbDataMode = 0664;
+mode_t mdbDataMode = 0774;
 
 MDB_env *mdbEnv;
 MDB_txn *mdbTxn;
@@ -36,7 +36,7 @@ int prepareMdb() {
 	
 	struct stat fileStat;
     if( stat(mdbDataDir, &fileStat) != 0 ) {
-        printf("Create data directory: %s", mdbDataDir);
+        printf("Create data directory: %s\n", mdbDataDir);
         if( mkdir(mdbDataDir, mdbDataMode) != 0 ) {
             fprintf(stderr, "Failed to create %s\n", mdbDataDir);
             return 1;

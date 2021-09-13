@@ -68,14 +68,20 @@ void configure(int argc, char *argv[]) {
 
     // -- Read CLI arguments -------
     
-    const char *options = "i:";
+    const char *options = "i:m:";
     int c;
 
     while ((c = getopt(argc, argv, options)) != -1) {
         switch(c) {
+        
             case 'i':
                 interface = optarg;
-                printf("Select interface: %s\n", optarg);
+                printf("Select interface: %s\n", interface);
+                break;
+                
+            case 'm':
+                mdbDataDir = optarg;
+                printf("Store data to: %s\n", mdbDataDir);
                 break;
         }
     }
@@ -85,6 +91,7 @@ void configure(int argc, char *argv[]) {
 * Launches arp-scan, reads IP and MAC, resolves hostnames
 * CLI Arguments:
 *   -i <interface name>
+*   -m <mdb directory> (optional)
 */
 int main(int argc, char *argv[]) {
 
