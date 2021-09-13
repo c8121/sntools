@@ -202,6 +202,9 @@ int main(int argc, char *argv[]) {
 		exit(EX_IOERR);
 	}
 	
+	int cntNewItems = 0;
+	int cntChangedItems = 0;
+	
 	char buf[254];
 	while( fgets(buf, sizeof(buf), cmd) ) {
 		
@@ -224,16 +227,20 @@ int main(int argc, char *argv[]) {
 		MDB_val lastHostnameToIp;
 		if( getMdb(ip, &lastHostnameToIp) == MDB_NOTFOUND ) {
 		    printf( "New IP: %s (Hostname=%s)\n", ip, hostname);
+		    cntNewItems++;
 		} else if( strcmp(hostname, lastHostnameToIp.mv_data) != 0 ) {
 		    printf( "Hostname changed: old=%s, new=%s (IP=%s)\n", (char *)lastHostnameToIp.mv_data, hostname, ip);
+		    cntChangedItems++;
 		}
 		
 		// --- Check if MAC existed before & if hostname changed
 		MDB_val lastHostnameToMac;
 		if( getMdb(mac, &lastHostnameToMac) == MDB_NOTFOUND ) {
 		    printf( "New MAC: %s (Hostname=%s)\n", mac, hostname);
+		    cntNewItems++;
 		} else if( strcmp(hostname, lastHostnameToMac.mv_data) != 0 ) {
 		    printf( "Hostname changed: old=%s, new=%s (MAC=%s)\n", (char *)lastHostnameToMac.mv_data, hostname, mac);
+		    cntChangedItems++;
 		}
 		
 		putMdb(ip, hostname);
@@ -245,6 +252,18 @@ int main(int argc, char *argv[]) {
 		pclose(cmd);
 	} else {
 		fprintf(stderr, "Broken pipe: %s", cmdString);
+	}
+	
+	if( cntNewItems == 0 ) {
+	    printf( "No new items detected\n");
+	} else {
+	    printf( "Notice: %i new items detected\n", cntNewItems);
+	}
+	
+    if( cntChangedItems == 0 ) {
+	    printf( "No changes detected\n");
+	} else {
+	    printf( "Notice: %i changes detected\n", cntChangedItems);
 	}
 
     closeMdb();
