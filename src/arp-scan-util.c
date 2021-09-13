@@ -22,6 +22,7 @@
 #include <sysexits.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
@@ -31,11 +32,12 @@
 char *arpScanCommand = "/usr/sbin/arp-scan --interface=%s --localnet -x";
 char *interface = NULL;
 
-char *mdbDataDir = "/tmp";
+char *mdbDataDir = "/var/spool/sntools";
+mode_t mdbDataMode = 0664;
 
 MDB_env *mdbEnv;
-MDB_dbi *mdbDbi;
 MDB_txn *mdbTxn;
+MDB_dbi mdbDbi;
 
 /**
 * Resolve IP to Hostname
@@ -62,7 +64,8 @@ int resolveIpAddress(char *ip, char *resolvedName, int size) {
 }
 
 /**
-*
+* Create LMDB resources
+* @return 0 on success
 */
 int prepareMdb() {
 	
@@ -71,9 +74,22 @@ int prepareMdb() {
         return 1;
     }
     
-    if( mdb_env_open(mdbEnv, mdbDataDir, 0, 0664) != MDB_SUCCESS ) {
+    if( mdb_env_open(mdbEnv, mdbDataDir, 0, mdbDataMode) != MDB_SUCCESS ) {
         mdb_env_close(mdbEnv);
         fprintf(stderr, "Failed to open LMDB environment");
+        return 1;
+    }
+    
+    if( mdb_txn_begin(mdbEnv, NULL, 0, &mdbTxn) != MDB_SUCCESS ) {
+        mdb_env_close(mdbEnv);
+        fprintf(stderr, "Failed to begin LMDB transaction");
+        return 1;
+    }
+    
+    if( mdb_dbi_open(mdbTxn, NULL, 0, &mdbDbi) != MDB_SUCCESS ) {
+        mdb_txn_abort(mdbTxn);
+        mdb_env_close(mdbEnv);
+        fprintf(stderr, "Failed to open LMDB database");
         return 1;
     }
     
@@ -81,12 +97,60 @@ int prepareMdb() {
 
 }
 
+/**
+*
+*/
+void closeMdb() {
+
+    if( mdb_txn_commit(mdbTxn) != MDB_SUCCESS ) {
+        fprintf(stderr, "Failed to commit LMDB transaction");
+    }
+    
+    mdb_dbi_close(mdbEnv, mdbDbi);
+    mdb_env_close(mdbEnv);
+
+}
+
+/**
+*
+*/
+int getMdb(char *key, MDB_val *value) {
+
+    MDB_val key_val;
+    key_val.mv_size = strlen(key)+1;
+    key_val.mv_data = key;
+    
+    return mdb_get(mdbTxn, mdbDbi, &key_val, value);
+}
+
+/**
+*
+*/
+void putMdb(char *key, char *value) {
+
+    MDB_val key_val;
+    key_val.mv_size = strlen(key)+1;
+    key_val.mv_data = key;
+    
+    MDB_val data_val;
+    data_val.mv_size = strlen(value)+1;
+    data_val.mv_data = value;
+    
+    if( mdb_put(mdbTxn, mdbDbi, &key_val, &data_val, 0) != MDB_SUCCESS ) {
+        fprintf(stderr, "Failed to store key %s", key);
+    }
+}
+
 
 /**
  * Read command line arguments and configure application
+ * Create data directoy
  */
 void configure(int argc, char *argv[]) {
 
+
+    // -- Read CLI arguments -------
+    
     const char *options = "i:";
     int c;
 
@@ -98,6 +162,17 @@ void configure(int argc, char *argv[]) {
                 break;
         }
     }
+    
+    // -- Check/create data dir -----
+    
+    struct stat fileStat;
+    if( stat(mdbDataDir, &fileStat) != 0 ) {
+        printf("Create data directory: %s", mdbDataDir);
+        if( mkdir(mdbDataDir, mdbDataMode) != 0 ) {
+            fprintf(stderr, "Failed to create %s", mdbDataDir);
+        }
+    }
+        
 
 }
 
@@ -110,7 +185,7 @@ int main(int argc, char *argv[]) {
 
     configure(argc, argv);
     if( interface == NULL ) {
-        fprintf(stderr, "Please select an interdace (-i)\n");
+        fprintf(stderr, "Please select an interface (-i)\n");
         exit(EX_USAGE);
     }
 
@@ -130,7 +205,7 @@ int main(int argc, char *argv[]) {
 	char buf[254];
 	while( fgets(buf, sizeof(buf), cmd) ) {
 		
-		printf("arp-scan> %s", buf);
+		//printf("arp-scan> %s", buf);
 		
 		char *tok = strtok(buf, "\t");
 		char ip[strlen(tok)+1];
@@ -143,7 +218,27 @@ int main(int argc, char *argv[]) {
 		char hostname[NI_MAXHOST];
 		resolveIpAddress(ip, hostname, sizeof(hostname));
 
-		printf("IP: %s, MAC: %s, Name: %s\n", ip, mac, hostname);
+		//printf("IP: %s, MAC: %s, Name: %s\n", ip, mac, hostname);
+		
+		// --- Check if IP existed before & if hostname changed
+		MDB_val lastHostnameToIp;
+		if( getMdb(ip, &lastHostnameToIp) == MDB_NOTFOUND ) {
+		    printf( "New IP: %s (Hostname=%s)\n", ip, hostname);
+		} else if( strcmp(hostname, lastHostnameToIp.mv_data) != 0 ) {
+		    printf( "Hostname changed: old=%s, new=%s (IP=%s)\n", (char *)lastHostnameToIp.mv_data, hostname, ip);
+		}
+		
+		// --- Check if MAC existed before & if hostname changed
+		MDB_val lastHostnameToMac;
+		if( getMdb(mac, &lastHostnameToMac) == MDB_NOTFOUND ) {
+		    printf( "New MAC: %s (Hostname=%s)\n", mac, hostname);
+		} else if( strcmp(hostname, lastHostnameToMac.mv_data) != 0 ) {
+		    printf( "Hostname changed: old=%s, new=%s (MAC=%s)\n", (char *)lastHostnameToMac.mv_data, hostname, mac);
+		}
+		
+		putMdb(ip, hostname);
+		putMdb(mac, hostname);
+		
 	}
 	
 	if( feof(cmd) ) {
@@ -152,4 +247,5 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Broken pipe: %s", cmdString);
 	}
 
+    closeMdb();
 }
