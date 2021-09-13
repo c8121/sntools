@@ -1,10 +1,9 @@
 #!/bin/bash
 
-BASE=$(dirname $0)
+BASE=$(realpath $(dirname $0))
 
 sourceDir=$BASE/src
 binDir=$BASE/bin
-
 
 if [[ ! -d "$sourceDir" ]] ; then
 	echo "Source directory not found: $sourceDir"
@@ -16,7 +15,15 @@ if [[ ! -d "$binDir" ]] ; then
 	mkdir -p "$binDir"
 fi
 
+# ---- make lmdb ---------
+if [[ ! -f "/usr/local/lib/liblmdb.a" ]] ; then
+	cd $BASE/lib/liblmdb
+	make && sudo make install && sudo make clean
+	sudo /sbin/ldconfig -v
+fi
 
 
+# ------------------------
 echo "Build arp-scan-util"
-gcc -Wall -I./lib/liblmdb/ -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c" 
+cd $BASE
+gcc -Wall -I./lib/liblmdb -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c" -llmdb
