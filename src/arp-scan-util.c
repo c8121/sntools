@@ -167,18 +167,30 @@ int main(int argc, char *argv[]) {
 			cntChangedItems++;
 		}
 
+		//Store ip -> hostname
 		putMdb(ip, hostname);
+		
+		//Store mac -> hostname
 		putMdb(mac, hostname);
+		
+		
+		char key[64], ts[32];
+		
+		//Store mac -> ip
+		sprintf(key, "MacIp:%s", mac);
+		putMdb(key, ip);
 
 
-		char ts[32];
+		//Timestamp as char* fpr putMdb
 		sprintf(ts, "%ld", (time_t)time(NULL));
-
-		char tsKey[64];
-		sprintf(tsKey, "%s_ts", ip);
-		putMdb(tsKey, ts);
-		sprintf(tsKey, "%s_ts", mac);
-		putMdb(tsKey, ts);
+		
+		//Store ip -> timestamp
+		sprintf(key, "%s_ts", ip);
+		putMdb(key, ts);
+		
+		//Store mac -> timestamp
+		sprintf(key, "%s_ts", mac);
+		putMdb(key, ts);
 
 	}
 
