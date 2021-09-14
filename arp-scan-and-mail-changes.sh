@@ -5,7 +5,7 @@
 #
 
 SENDER=""
-SUBJECT="arp-scan detected changes"
+SUBJECT="$(hostname): arp-scan detected changes"
 SMTP_SERVER=root
 
 BASE=$(realpath $(dirname $0))
@@ -46,6 +46,7 @@ if grep -q "Notice" "$logfile" ; then
 	messagefile=$(mktemp)
 	
 	echo "arp-scan detected changes" > "$messagefile"
+	echo "Host: $(hostname)" >> "$messagefile"	
 	echo "Date: $(date)" >> "$messagefile"
 	echo "" >> "$messagefile"
 	cat "$logfile" >> "$messagefile"
