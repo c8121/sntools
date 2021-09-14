@@ -2,9 +2,17 @@
 
 Some network tools (actually very few at the moment)
 
+## Requirements
+
+`arp-scan` (https://github.com/royhills/arp-scan),
+available on Debian/Ubuntu via `apt install arp-scan`
+
+Bash scripts are using `swaks` (https://github.com/jetmore/swaks) for sending e-mails,
+available on Debian/Ubuntu via `apt install swaks`
+
 ## arp-scan-util
 
-Uses https://github.com/royhills/arp-scan to scan network. Stores IPs, MACs and Hostnames into a local LMDB database
+Uses `arp-scan` to scan network. Stores IPs, MACs and Hostnames into a local LMDB database
 
 ## arp-history
 
