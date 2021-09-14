@@ -86,6 +86,19 @@ int main(int argc, char *argv[]) {
 			printf( "Last seen at: %s\n", (char *)tsData.mv_data);
 		}
 
+	} else {
+
+		MDB_cursor *cursor;
+		if( mdb_cursor_open(mdbTxn, mdbDbi, &cursor) != MDB_SUCCESS ) {
+			fprintf(stderr, "Failed to open cursor\n");
+		} else {
+			MDB_val key, value;
+			while( mdb_cursor_get(cursor, &key, &value, MDB_NEXT) == MDB_SUCCESS ) {
+				printf("%s = %s\n", (char *)key.mv_data, (char *)value.mv_data);
+			}
+			mdb_cursor_close(cursor);
+		}
+
 	}
 
 	closeMdb();
