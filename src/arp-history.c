@@ -40,7 +40,7 @@ void configure(int argc, char *argv[]) {
 
     // -- Read CLI arguments -------
     
-    const char *options = "i:m:";
+    const char *options = "i:d:";
     int c;
 
     while ((c = getopt(argc, argv, options)) != -1) {
@@ -52,7 +52,7 @@ void configure(int argc, char *argv[]) {
                 break;
 
                         
-            case 'm':
+            case 'd':
                 mdbDataDir = optarg;
                 printf("Load data from: %s\n", mdbDataDir);
                 break;
@@ -64,7 +64,7 @@ void configure(int argc, char *argv[]) {
 * Launches arp-scan, reads IP and MAC, resolves hostnames
 * CLI Arguments:
 *   -i <ip> (optional)
-*   -m <mdb directory> (optional)
+*   -d <mdb directory> (optional)
 */
 int main(int argc, char *argv[]) {
 
