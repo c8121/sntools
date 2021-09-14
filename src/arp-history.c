@@ -29,6 +29,7 @@
 
 
 char *query = NULL;
+char outputFormat = '0';
 
 
 /**
@@ -40,7 +41,7 @@ void configure(int argc, char *argv[]) {
 
 	// -- Read CLI arguments -------
 
-	const char *options = "q:m:d:";
+	const char *options = "q:m:d:t";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -55,15 +56,90 @@ void configure(int argc, char *argv[]) {
 			mdbDataDir = optarg;
 			printf("Load data from: %s\n", mdbDataDir);
 			break;
+
+		case 't':
+			outputFormat = 't';
+			printf("Load data from: %s\n", mdbDataDir);
+			break;
 		}
 	}
 }
+
+/**
+ * 
+ */
+void printAllData() {
+
+	MDB_cursor *cursor;
+	if( mdb_cursor_open(mdbTxn, mdbDbi, &cursor) != MDB_SUCCESS ) {
+		fprintf(stderr, "Failed to open cursor\n");
+	} else {
+		MDB_val key, value;
+		while( mdb_cursor_get(cursor, &key, &value, MDB_NEXT) == MDB_SUCCESS ) {
+			printf("%s = %s\n", (char *)key.mv_data, (char *)value.mv_data);
+		}
+		mdb_cursor_close(cursor);
+	}
+
+}
+
+/**
+ * 
+ */
+void printTable() {
+
+	MDB_cursor *cursor;
+	if( mdb_cursor_open(mdbTxn, mdbDbi, &cursor) != MDB_SUCCESS ) {
+		fprintf(stderr, "Failed to open cursor\n");
+	} else {
+		MDB_val key, value;
+		key.mv_data = "MacIp:";
+		key.mv_size = 6;
+		if( mdb_cursor_get(cursor, &key, &value, MDB_SET_RANGE) == MDB_SUCCESS ) {
+
+			printf("MAC              \tIP              TS         \tDATE\n");
+
+			while( mdb_cursor_get(cursor, &key, &value, MDB_NEXT) == MDB_SUCCESS ) {
+
+				char *keyName = key.mv_data;
+				if( strlen(keyName) < 6 || strncmp(keyName, "MacIp:", 6) != 0 ) {
+					break;
+				}
+
+				char *mac = &keyName[6];
+				char *ip = (char *)value.mv_data;
+
+				char tsKey[64];
+				sprintf(tsKey, "%s_ts", mac);
+				
+				char *ts;
+				MDB_val tsData;
+				if( getMdb(tsKey, &tsData) == MDB_NOTFOUND ) {
+					ts = '\0';
+				} else {
+					ts = (char*)tsData.mv_data;
+				}
+				
+				time_t tsl = strtol(ts, NULL, 0);
+				struct tm *lt = localtime(&tsl);
+				char timeString[32];
+				strftime(timeString, sizeof(timeString), "%a %b %d %Y", lt);
+
+				printf("%s\t%s\t%s\t%s\n", mac, ip, ts, timeString);
+			}
+		}
+		mdb_cursor_close(cursor);
+	}
+
+}
+
 
 /**
  * Launches arp-scan, reads IP and MAC, resolves hostnames
  * CLI Arguments:
  *   -q <ip or mac> (optional)
  *   -d <mdb directory> (optional)
+ *   -t (generate table, optional)
  */
 int main(int argc, char *argv[]) {
 
@@ -85,19 +161,13 @@ int main(int argc, char *argv[]) {
 		} else {
 			printf( "Last seen at: %s\n", (char *)tsData.mv_data);
 		}
+	} else if ( outputFormat == 't' ) {
+
+		printTable();
 
 	} else {
 
-		MDB_cursor *cursor;
-		if( mdb_cursor_open(mdbTxn, mdbDbi, &cursor) != MDB_SUCCESS ) {
-			fprintf(stderr, "Failed to open cursor\n");
-		} else {
-			MDB_val key, value;
-			while( mdb_cursor_get(cursor, &key, &value, MDB_NEXT) == MDB_SUCCESS ) {
-				printf("%s = %s\n", (char *)key.mv_data, (char *)value.mv_data);
-			}
-			mdb_cursor_close(cursor);
-		}
+		printAllData();
 
 	}
 
