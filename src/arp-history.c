@@ -11,7 +11,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 /**
  * Author: christian c8121 de
@@ -31,6 +31,7 @@
 char *queryIp = NULL;
 
 
+
 /**
  * Read command line arguments and configure application
  * Create data directoy
@@ -38,56 +39,56 @@ char *queryIp = NULL;
 void configure(int argc, char *argv[]) {
 
 
-    // -- Read CLI arguments -------
-    
-    const char *options = "i:d:";
-    int c;
+	// -- Read CLI arguments -------
 
-    while ((c = getopt(argc, argv, options)) != -1) {
-        switch(c) {
+	const char *options = "i:d:";
+	int c;
 
-            case 'i':
-                queryIp = optarg;
-                printf("Query: %s\n", queryIp);
-                break;
+	while ((c = getopt(argc, argv, options)) != -1) {
+		switch(c) {
 
-                        
-            case 'd':
-                mdbDataDir = optarg;
-                printf("Load data from: %s\n", mdbDataDir);
-                break;
-        }
-    }
+		case 'i':
+			queryIp = optarg;
+			printf("Query: %s\n", queryIp);
+			break;
+
+
+		case 'd':
+			mdbDataDir = optarg;
+			printf("Load data from: %s\n", mdbDataDir);
+			break;
+		}
+	}
 }
 
 /**
-* Launches arp-scan, reads IP and MAC, resolves hostnames
-* CLI Arguments:
-*   -i <ip> (optional)
-*   -d <mdb directory> (optional)
-*/
+ * Launches arp-scan, reads IP and MAC, resolves hostnames
+ * CLI Arguments:
+ *   -i <ip> (optional)
+ *   -d <mdb directory> (optional)
+ */
 int main(int argc, char *argv[]) {
 
-    configure(argc, argv);
+	configure(argc, argv);
 
-    if( prepareMdb() != 0 ) {
-        exit(EX_IOERR);   
-    }
+	if( prepareMdb() != 0 ) {
+		exit(EX_IOERR);   
+	}
 
 
 	if( queryIp != NULL ) {
-	
-	    char tsKey[64];
+
+		char tsKey[64];
 		sprintf(tsKey, "%s_ts", queryIp);
-		
+
 		MDB_val tsData;
 		if( getMdb(tsKey, &tsData) == MDB_NOTFOUND ) {
-		    printf( "Not found\n");
+			printf( "Not found\n");
 		} else {
-		    printf( "Last seen at: %s\n", (char *)tsData.mv_data);
+			printf( "Last seen at: %s\n", (char *)tsData.mv_data);
 		}
-		
+
 	}
 
-    closeMdb();
+	closeMdb();
 }
