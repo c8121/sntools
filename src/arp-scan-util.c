@@ -33,6 +33,8 @@
 char *arpScanCommand = "/usr/sbin/arp-scan --interface=%s --localnet -x";
 char *interface = NULL;
 
+int verbosity = 0;
+
 
 /**
 * Resolve IP to Hostname
@@ -69,7 +71,7 @@ void configure(int argc, char *argv[]) {
 
     // -- Read CLI arguments -------
     
-    const char *options = "i:m:";
+    const char *options = "i:m:v";
     int c;
 
     while ((c = getopt(argc, argv, options)) != -1) {
@@ -84,6 +86,10 @@ void configure(int argc, char *argv[]) {
                 mdbDataDir = optarg;
                 printf("Store data to: %s\n", mdbDataDir);
                 break;
+                
+            case 'v':
+                verbosity = 1;
+                break;
         }
     }
 }
@@ -93,6 +99,7 @@ void configure(int argc, char *argv[]) {
 * CLI Arguments:
 *   -i <interface name>
 *   -m <mdb directory> (optional)
+*   -v (verbose output, optinoal)
 */
 int main(int argc, char *argv[]) {
 
@@ -121,7 +128,9 @@ int main(int argc, char *argv[]) {
 	char buf[254];
 	while( fgets(buf, sizeof(buf), cmd) ) {
 		
-		//printf("arp-scan> %s", buf);
+		if( verbosity > 0 ) {
+		    printf("arp-scan> %s", buf);
+		}
 		
 		char *tok = strtok(buf, "\t");
 		char ip[strlen(tok)+1];
@@ -134,7 +143,9 @@ int main(int argc, char *argv[]) {
 		char hostname[NI_MAXHOST];
 		resolveIpAddress(ip, hostname, sizeof(hostname));
 
-		//printf("IP: %s, MAC: %s, Name: %s\n", ip, mac, hostname);
+		if( verbosity > 0 ) {
+		    printf("IP: %s, MAC: %s, Name: %s\n", ip, mac, hostname);
+		}
 		
 		// --- Check if IP existed before & if hostname changed
 		MDB_val lastHostnameToIp;
