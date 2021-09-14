@@ -28,8 +28,7 @@
 #include "mdb.c"
 
 
-char *queryIp = NULL;
-
+char *query = NULL;
 
 
 /**
@@ -41,17 +40,16 @@ void configure(int argc, char *argv[]) {
 
 	// -- Read CLI arguments -------
 
-	const char *options = "i:d:";
+	const char *options = "q:m:d:";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
 		switch(c) {
 
-		case 'i':
-			queryIp = optarg;
-			printf("Query: %s\n", queryIp);
+		case 'q':
+			query = optarg;
+			printf("Query: %s\n", query);
 			break;
-
 
 		case 'd':
 			mdbDataDir = optarg;
@@ -64,7 +62,7 @@ void configure(int argc, char *argv[]) {
 /**
  * Launches arp-scan, reads IP and MAC, resolves hostnames
  * CLI Arguments:
- *   -i <ip> (optional)
+ *   -q <ip or mac> (optional)
  *   -d <mdb directory> (optional)
  */
 int main(int argc, char *argv[]) {
@@ -76,14 +74,14 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	if( queryIp != NULL ) {
+	if( query != NULL ) {
 
 		char tsKey[64];
-		sprintf(tsKey, "%s_ts", queryIp);
+		sprintf(tsKey, "%s_ts", query);
 
 		MDB_val tsData;
 		if( getMdb(tsKey, &tsData) == MDB_NOTFOUND ) {
-			printf( "Not found\n");
+			printf( "'%s' not found\n", query);
 		} else {
 			printf( "Last seen at: %s\n", (char *)tsData.mv_data);
 		}
