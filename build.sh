@@ -24,7 +24,13 @@ fi
 
 
 # ------------------------
-echo "Build arp-scan-util"
+echo "Build arp-scan-util & arp-history"
 cd $BASE
 gcc -Wall -I./lib/liblmdb -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c" -llmdb
 gcc -Wall -I./lib/liblmdb -o "$binDir/arp-history" "$sourceDir/arp-history.c" -llmdb
+
+
+# ------------------------
+echo "Build exec-and-mail"
+cd $BASE
+gcc -Wall -o "$binDir/exec-and-mail" "$sourceDir/exec-and-mail.c"
