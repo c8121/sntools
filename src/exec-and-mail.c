@@ -130,7 +130,8 @@ int send_buffer() {
 
 
 /**
-*
+* Check if data was read from command.
+* Send if enough data available (or if force is not 0)
 */
 void handle_data(int force) {
 
