@@ -32,6 +32,7 @@
 
 #include "net_util.c"
 #include "smtp_socket_util.c"
+#include "linked_items.c"
 
 char *command;
 char *smtpHost;
@@ -48,41 +49,7 @@ int verbosity = 0;
 
 pthread_mutex_t handle_data_mutex;
 
-
-typedef struct message_line {
-    char *line;
-    struct message_line *next;
-} message_line_t;
-
-/**
- *
- */
-int message_line_count(message_line_t *start) {
-    int c = 0;
-    message_line_t *curr = start;
-    while( curr != NULL ) {
-        c++;
-        curr = curr->next;
-    }
-    return c;
-}
-
-
-
-/**
- * Free memory of whole chain
- */
-void message_line_free(message_line_t *start) {
-    if( start == NULL ) {
-        return;
-    }
-    message_line_free(start->next);
-
-    free(start->line);
-    free(start->next);
-}
-
-message_line_t *buffer = NULL;
+struct linked_item *buffer = NULL;
 int bufferMaxLines = 100;
 
 
@@ -137,9 +104,9 @@ int send_buffer() {
         write(socket, buf, strlen(buf));
 
         // Send body which has been read above
-        message_line_t *curr = buffer;
+        struct linked_item *curr = buffer;
         while( curr != NULL ) {
-            smtp_write(socket, curr->line);
+            smtp_write(socket, curr->data);
             curr = curr->next;
         }
 
@@ -177,19 +144,19 @@ void handle_data(int force) {
         return;
     }
 
-    if( force || message_line_count(buffer) >= bufferMaxLines ) {
+    if( force || linked_item_count(buffer) >= bufferMaxLines ) {
 
         if( verbosity > 1 ) {
-            message_line_t *out = buffer;
+            struct linked_item *out = buffer;
             while( out != NULL ) {
-                printf("SEND> %s", out->line);
+                printf("SEND> %s", (char*)out->data);
                 out = out->next;
             }
         }
 
         send_buffer();
 
-        message_line_free(buffer);
+        linked_item_free(buffer);
         buffer = NULL;
     }
 
@@ -197,6 +164,10 @@ void handle_data(int force) {
 
 }
 
+
+/**
+*
+*/
 void *timer() {
     while( 1 ) {
         sleep(waitTimeout);
@@ -204,6 +175,9 @@ void *timer() {
     }
 }
 
+/**
+*
+*/
 void create_timer() {
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, timer, NULL);
@@ -305,7 +279,7 @@ int main(int argc, char *argv[]) {
         exit(EX_IOERR);
     }
 
-    message_line_t *readInto = NULL;
+    struct linked_item *readInto = NULL;
 
     char line[1024];
     while( fgets(line, sizeof(line), cmd) ) {
@@ -317,18 +291,18 @@ int main(int argc, char *argv[]) {
         pthread_mutex_lock(&handle_data_mutex);
 
         if( buffer == NULL ) {
-            buffer = malloc(sizeof(message_line_t));
+            buffer = malloc(sizeof(struct linked_item));
             readInto = buffer;
         } else {
-            readInto->next = malloc(sizeof(message_line_t));
+            readInto->next = malloc(sizeof(struct linked_item));
             readInto = readInto->next;
         }
 
         readInto->next = NULL;
 
         int len = strlen(line);
-        readInto->line = malloc(len+1);
-        strcpy(readInto->line, line);
+        readInto->data = malloc(len+1);
+        strcpy(readInto->data, line);
 
         pthread_mutex_unlock(&handle_data_mutex);
 
