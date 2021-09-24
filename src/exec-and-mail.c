@@ -27,6 +27,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <time.h>
+#include <pthread.h>
+#include <unistd.h>
 
 char *command;
 char *smtpHost;
@@ -36,7 +38,13 @@ char *envTo;
 char *heloName;
 char *subject = "Output from command";
 
+int waitTimeout = 0;
+
 int verbosity = 0;
+
+
+pthread_mutex_t handle_data_mutex;
+
 
 typedef struct message_line {
     char *line;
@@ -73,7 +81,6 @@ void message_line_free(message_line_t *start) {
 
 message_line_t *buffer = NULL;
 int bufferMaxLines = 100;
-
 
 
 /**
@@ -268,13 +275,19 @@ int send_buffer() {
 /**
 *
 */
-void on_line_received(int eof) {
+void handle_data(int force) {
 
+    if( verbosity > 0 ) {
+        printf("check if data should be sent (force=%i)\n", force);
+    }
+
+    pthread_mutex_lock(&handle_data_mutex);
     if( buffer == NULL ) {
+        pthread_mutex_unlock(&handle_data_mutex);
         return;
     }
 
-    if( eof || message_line_count(buffer) >= bufferMaxLines ) {
+    if( force || message_line_count(buffer) >= bufferMaxLines ) {
 
         if( verbosity > 1 ) {
             message_line_t *out = buffer;
@@ -290,6 +303,20 @@ void on_line_received(int eof) {
         buffer = NULL;
     }
 
+    pthread_mutex_unlock(&handle_data_mutex);
+
+}
+
+void *timer() {
+    while( 1 ) {
+        sleep(waitTimeout);
+        handle_data(1);
+    }
+}
+
+void create_timer() {
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, timer, NULL);
 }
 
 
@@ -302,7 +329,7 @@ void configure(int argc, char *argv[]) {
 
 	// -- Read CLI arguments -------
 
-	const char *options = "s:c:vv";
+	const char *options = "s:c:t:vv";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -310,6 +337,11 @@ void configure(int argc, char *argv[]) {
 
 		    case 's':
                 subject = optarg;
+                break;
+
+            case 't':
+                waitTimeout = atoi(optarg);
+                printf("Wait timeout: %i seconds\n", waitTimeout);
                 break;
 
             case 'c':
@@ -328,7 +360,7 @@ void configure(int argc, char *argv[]) {
  * 
  */
 void usage_message() {
-    printf("Usage: exec-and-mail [-c buffer-line-count] [-v] [-s subject] <host> <port> <from> <to> \"<command>\"\n");
+    printf("Usage: exec-and-mail [-c buffer-line-count] [-t wait-timeout-seconds] [-v] [-s subject] <host> <port> <from> <to> \"<command>\"\n");
 }
 
 
@@ -371,6 +403,10 @@ int main(int argc, char *argv[]) {
         exit(EX_USAGE);
     }
 
+    if( waitTimeout > 0 ) {
+        create_timer();
+    }
+
     printf("Execute: %s\n", command);
 
     FILE *cmd = popen(command, "r");
@@ -388,6 +424,8 @@ int main(int argc, char *argv[]) {
             printf("command> %s", line);
         }
 
+        pthread_mutex_lock(&handle_data_mutex);
+
         if( buffer == NULL ) {
             buffer = malloc(sizeof(message_line_t));
             readInto = buffer;
@@ -402,7 +440,9 @@ int main(int argc, char *argv[]) {
         readInto->line = malloc(len+1);
         strcpy(readInto->line, line);
 
-        on_line_received(0);
+        pthread_mutex_unlock(&handle_data_mutex);
+
+        handle_data(0);
     }
 
     if( feof(cmd) ) {
@@ -411,5 +451,5 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Broken pipe: %s", command);
     }
 
-    on_line_received(1);
+    handle_data(1);
 }
