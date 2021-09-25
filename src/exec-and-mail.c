@@ -135,7 +135,7 @@ int send_buffer() {
  */
 void handle_data(int force) {
 
-	if( verbosity > 0 ) {
+	if( verbosity > 1 ) {
 		printf("check if data should be sent (force=%i)\n", force);
 	}
 
