@@ -52,6 +52,7 @@ void linked_item_free(struct linked_item *start) {
     
     if( start->next != NULL ) {    
     	linked_item_free(start->next);
-        free(start->next);
     }
+    
+    free(start);
 }
