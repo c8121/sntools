@@ -187,12 +187,8 @@ void create_timer() {
 
 /**
  * Read command line arguments and configure application
- * Create data directoy
  */
 void configure(int argc, char *argv[]) {
-
-
-	// -- Read CLI arguments -------
 
 	const char *options = "s:c:t:vv";
 	int c;

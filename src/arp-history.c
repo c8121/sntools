@@ -34,12 +34,8 @@ char outputFormat = '0';
 
 /**
  * Read command line arguments and configure application
- * Create data directoy
  */
 void configure(int argc, char *argv[]) {
-
-
-	// -- Read CLI arguments -------
 
 	const char *options = "q:m:d:t";
 	int c;

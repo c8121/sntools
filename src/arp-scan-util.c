@@ -64,12 +64,8 @@ int resolveIpAddress(char *ip, char *resolvedName, int size) {
 
 /**
  * Read command line arguments and configure application
- * Create data directoy
  */
 void configure(int argc, char *argv[]) {
-
-
-	// -- Read CLI arguments -------
 
 	const char *options = "i:d:v";
 	int c;
