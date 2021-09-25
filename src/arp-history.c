@@ -111,7 +111,7 @@ void printTable() {
 
 				char tsKey[64];
 				sprintf(tsKey, "%s_ts", mac);
-				
+
 				char *ts;
 				MDB_val tsData;
 				if( getMdb(tsKey, &tsData) == MDB_NOTFOUND ) {
@@ -119,7 +119,7 @@ void printTable() {
 				} else {
 					ts = (char*)tsData.mv_data;
 				}
-				
+
 				time_t tsl = strtol(ts, NULL, 0);
 				struct tm *lt = localtime(&tsl);
 				char timeString[32];

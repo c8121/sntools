@@ -58,130 +58,130 @@ int bufferMaxLines = 100;
  */
 int send_buffer() {
 
-    int socket = open_socket(smtpHost, smtpPort);
-    char buf[1024];
-    if( socket > 0 ) {
+	int socket = open_socket(smtpHost, smtpPort);
+	char buf[1024];
+	if( socket > 0 ) {
 
-        //Read SMTP Greeting
-        if( smtp_read(socket) != 0 ) {
-            return -1;
-        }
+		//Read SMTP Greeting
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
 
-        snprintf(buf, sizeof(buf), "helo %s\r\n", heloName);
-        write(socket, buf, strlen(buf));
-        if( smtp_read(socket) != 0 ) {
-            return -1;
-        }
+		snprintf(buf, sizeof(buf), "helo %s\r\n", heloName);
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
 
-        snprintf(buf, sizeof(buf), "mail from: <%s>\r\n", envFrom);
-        write(socket, buf, strlen(buf));
-        if( smtp_read(socket) != 0 ) {
-            return -1;
-        }
+		snprintf(buf, sizeof(buf), "mail from: <%s>\r\n", envFrom);
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
 
-        snprintf(buf, sizeof(buf), "rcpt to: <%s>\r\n", envTo);
-        write(socket, buf, strlen(buf));
-        if( smtp_read(socket) != 0 ) {
-            return -1;
-        }
+		snprintf(buf, sizeof(buf), "rcpt to: <%s>\r\n", envTo);
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
 
-        snprintf(buf, sizeof(buf), "data\r\n");
-        write(socket, buf, strlen(buf));
-        if( smtp_read(socket) != 0 ) {
-            return -1;
-        }
+		snprintf(buf, sizeof(buf), "data\r\n");
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
 
-        // Send header
-        snprintf(buf, sizeof(buf), "Subject: %s\r\n", subject);
-        write(socket, buf, strlen(buf));
-        snprintf(buf, sizeof(buf), "From: <%s>\r\n", envFrom);
-        write(socket, buf, strlen(buf));
-        snprintf(buf, sizeof(buf), "To: <%s>\r\n", envTo);
-        write(socket, buf, strlen(buf));
+		// Send header
+		snprintf(buf, sizeof(buf), "Subject: %s\r\n", subject);
+		write(socket, buf, strlen(buf));
+		snprintf(buf, sizeof(buf), "From: <%s>\r\n", envFrom);
+		write(socket, buf, strlen(buf));
+		snprintf(buf, sizeof(buf), "To: <%s>\r\n", envTo);
+		write(socket, buf, strlen(buf));
 
-        // Start body
-        snprintf(buf, sizeof(buf), "\r\n");
-        write(socket, buf, strlen(buf));
+		// Start body
+		snprintf(buf, sizeof(buf), "\r\n");
+		write(socket, buf, strlen(buf));
 
-        // Send body which has been read above
-        struct linked_item *curr = buffer;
-        while( curr != NULL ) {
-            smtp_write(socket, curr->data);
-            curr = curr->next;
-        }
+		// Send body which has been read above
+		struct linked_item *curr = buffer;
+		while( curr != NULL ) {
+			smtp_write(socket, curr->data);
+			curr = curr->next;
+		}
 
-        snprintf(buf, sizeof(buf), "\r\n.\r\n");
-        write(socket, buf, strlen(buf));
-        if( smtp_read(socket) != 0 ) {
-            return -1;
-        }
+		snprintf(buf, sizeof(buf), "\r\n.\r\n");
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
 
-        snprintf(buf, sizeof(buf), "quit\r\n");
-        write(socket, buf, strlen(buf));
-        if( smtp_read(socket) != 0 ) {
-            return -1;
-        }
+		snprintf(buf, sizeof(buf), "quit\r\n");
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
 
-        close(socket);
-    }
+		close(socket);
+	}
 
-    return 0;
+	return 0;
 }
 
 
 /**
-* Check if data was read from command.
-* Send if enough data available (or if force is not 0)
-*/
+ * Check if data was read from command.
+ * Send if enough data available (or if force is not 0)
+ */
 void handle_data(int force) {
 
-    if( verbosity > 0 ) {
-        printf("check if data should be sent (force=%i)\n", force);
-    }
+	if( verbosity > 0 ) {
+		printf("check if data should be sent (force=%i)\n", force);
+	}
 
-    pthread_mutex_lock(&handle_data_mutex);
-    if( buffer == NULL ) {
-        pthread_mutex_unlock(&handle_data_mutex);
-        return;
-    }
+	pthread_mutex_lock(&handle_data_mutex);
+	if( buffer == NULL ) {
+		pthread_mutex_unlock(&handle_data_mutex);
+		return;
+	}
 
-    if( force || linked_item_count(buffer) >= bufferMaxLines ) {
+	if( force || linked_item_count(buffer) >= bufferMaxLines ) {
 
-        if( verbosity > 1 ) {
-            struct linked_item *out = buffer;
-            while( out != NULL ) {
-                printf("SEND> %s", (char*)out->data);
-                out = out->next;
-            }
-        }
+		if( verbosity > 1 ) {
+			struct linked_item *out = buffer;
+			while( out != NULL ) {
+				printf("SEND> %s", (char*)out->data);
+				out = out->next;
+			}
+		}
 
-        send_buffer();
+		send_buffer();
 
-        linked_item_free(buffer);
-        buffer = NULL;
-    }
+		linked_item_free(buffer);
+		buffer = NULL;
+	}
 
-    pthread_mutex_unlock(&handle_data_mutex);
+	pthread_mutex_unlock(&handle_data_mutex);
 
 }
 
 
 /**
-*
-*/
+ *
+ */
 void *timer() {
-    while( 1 ) {
-        sleep(waitTimeout);
-        handle_data(1);
-    }
+	while( 1 ) {
+		sleep(waitTimeout);
+		handle_data(1);
+	}
 }
 
 /**
-*
-*/
+ *
+ */
 void create_timer() {
-    pthread_t thread_id;
-    pthread_create(&thread_id, NULL, timer, NULL);
+	pthread_t thread_id;
+	pthread_create(&thread_id, NULL, timer, NULL);
 }
 
 
@@ -200,23 +200,23 @@ void configure(int argc, char *argv[]) {
 	while ((c = getopt(argc, argv, options)) != -1) {
 		switch(c) {
 
-		    case 's':
-                subject = optarg;
-                break;
+		case 's':
+			subject = optarg;
+			break;
 
-            case 't':
-                waitTimeout = atoi(optarg);
-                printf("Wait timeout: %i seconds\n", waitTimeout);
-                break;
+		case 't':
+			waitTimeout = atoi(optarg);
+			printf("Wait timeout: %i seconds\n", waitTimeout);
+			break;
 
-            case 'c':
-                bufferMaxLines = atoi(optarg);
-                printf("Set buffer size: %i lines\n", bufferMaxLines);
-                break;
+		case 'c':
+			bufferMaxLines = atoi(optarg);
+			printf("Set buffer size: %i lines\n", bufferMaxLines);
+			break;
 
-			case 'v':
-                verbosity++;
-                break;
+		case 'v':
+			verbosity++;
+			break;
 		}
 	}
 }
@@ -225,7 +225,7 @@ void configure(int argc, char *argv[]) {
  * 
  */
 void usage_message() {
-    printf("Usage: exec-and-mail [-c buffer-line-count] [-t wait-timeout-seconds] [-v] [-s subject] <host> <port> <from> <to> \"<command>\"\n");
+	printf("Usage: exec-and-mail [-c buffer-line-count] [-t wait-timeout-seconds] [-v] [-s subject] <host> <port> <from> <to> \"<command>\"\n");
 }
 
 
@@ -234,87 +234,87 @@ void usage_message() {
  */
 int main(int argc, char *argv[]) {
 
-    configure(argc, argv);
+	configure(argc, argv);
 
-    if (argc - optind +1 < 6) {
-        fprintf(stderr, "Missing arguments\n");
-        usage_message();
-        exit(EX_USAGE);
-    }
+	if (argc - optind +1 < 6) {
+		fprintf(stderr, "Missing arguments\n");
+		usage_message();
+		exit(EX_USAGE);
+	}
 
-    // SMTP Server
-    smtpHost = argv[optind];
-    smtpPort = atoi(argv[optind+1]);
-    
-    // Check sender and recipient
-    envFrom = argv[optind+2];
-    envTo = argv[optind+3];
-    if( envFrom[0] == '\0' || envTo[0] == '\0' ) {
-        fprintf(stderr, "Parameter 'from' and 'to' cannot be empty\n");
-        usage_message();
-        exit(EX_USAGE);
-    }
-    
-    // Read hostname
-    char buf[128];
-    gethostname(buf, sizeof(buf));
-    heloName = buf;
+	// SMTP Server
+	smtpHost = argv[optind];
+	smtpPort = atoi(argv[optind+1]);
 
-    //Command
-    command = argv[optind+4];
-    if( command[0] == '\0' ) {
-        fprintf(stderr, "No command given\n");
-        usage_message();
-        exit(EX_USAGE);
-    }
+	// Check sender and recipient
+	envFrom = argv[optind+2];
+	envTo = argv[optind+3];
+	if( envFrom[0] == '\0' || envTo[0] == '\0' ) {
+		fprintf(stderr, "Parameter 'from' and 'to' cannot be empty\n");
+		usage_message();
+		exit(EX_USAGE);
+	}
 
-    if( waitTimeout > 0 ) {
-        create_timer();
-    }
+	// Read hostname
+	char buf[128];
+	gethostname(buf, sizeof(buf));
+	heloName = buf;
 
-    printf("Execute: %s\n", command);
+	//Command
+	command = argv[optind+4];
+	if( command[0] == '\0' ) {
+		fprintf(stderr, "No command given\n");
+		usage_message();
+		exit(EX_USAGE);
+	}
 
-    FILE *cmd = popen(command, "r");
-    if( cmd == NULL ) {
-        fprintf(stderr, "Failed to execute: %s", command);
-        exit(EX_IOERR);
-    }
+	if( waitTimeout > 0 ) {
+		create_timer();
+	}
 
-    struct linked_item *readInto = NULL;
+	printf("Execute: %s\n", command);
 
-    char line[1024];
-    while( fgets(line, sizeof(line), cmd) ) {
+	FILE *cmd = popen(command, "r");
+	if( cmd == NULL ) {
+		fprintf(stderr, "Failed to execute: %s", command);
+		exit(EX_IOERR);
+	}
 
-        if( verbosity > 0 ) {
-            printf("command> %s", line);
-        }
+	struct linked_item *readInto = NULL;
 
-        pthread_mutex_lock(&handle_data_mutex);
+	char line[1024];
+	while( fgets(line, sizeof(line), cmd) ) {
 
-        if( buffer == NULL ) {
-            buffer = malloc(sizeof(struct linked_item));
-            readInto = buffer;
-        } else {
-            readInto->next = malloc(sizeof(struct linked_item));
-            readInto = readInto->next;
-        }
+		if( verbosity > 0 ) {
+			printf("command> %s", line);
+		}
 
-        readInto->next = NULL;
+		pthread_mutex_lock(&handle_data_mutex);
 
-        int len = strlen(line);
-        readInto->data = malloc(len+1);
-        strcpy(readInto->data, line);
+		if( buffer == NULL ) {
+			buffer = malloc(sizeof(struct linked_item));
+			readInto = buffer;
+		} else {
+			readInto->next = malloc(sizeof(struct linked_item));
+			readInto = readInto->next;
+		}
 
-        pthread_mutex_unlock(&handle_data_mutex);
+		readInto->next = NULL;
 
-        handle_data(0);
-    }
+		int len = strlen(line);
+		readInto->data = malloc(len+1);
+		strcpy(readInto->data, line);
 
-    if( feof(cmd) ) {
-        pclose(cmd);
-    } else {
-        fprintf(stderr, "Broken pipe: %s", command);
-    }
+		pthread_mutex_unlock(&handle_data_mutex);
 
-    handle_data(1);
+		handle_data(0);
+	}
+
+	if( feof(cmd) ) {
+		pclose(cmd);
+	} else {
+		fprintf(stderr, "Broken pipe: %s", command);
+	}
+
+	handle_data(1);
 }

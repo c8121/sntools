@@ -11,7 +11,7 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 /**
  * Author: christian c8121 de
@@ -24,45 +24,45 @@
  */
 int smtp_read(int socket) {
 
-    char response[255];
-    char c;
-    int i=0;
-    while( 1 ) {
-        
-        int n = read(socket, &c, 1);
-        if( n < 1 ) {
-            return -1;
-        }
-        
-        if( c == '\n' ) {
-            
-            if( i > 0 && (response[0] == '2' || response[0] == '3') ) {
-                return 0;
-            } else {
-                fprintf(stderr, "Got error response: %s\n", response);
-                return -1;
-            }
-        }
-        
-        if( i < 254 ) {
-            response[i] = c;
-            response[i+1] ='\0';
-            i++;
-        }
-    }
-    
+	char response[255];
+	char c;
+	int i=0;
+	while( 1 ) {
+
+		int n = read(socket, &c, 1);
+		if( n < 1 ) {
+			return -1;
+		}
+
+		if( c == '\n' ) {
+
+			if( i > 0 && (response[0] == '2' || response[0] == '3') ) {
+				return 0;
+			} else {
+				fprintf(stderr, "Got error response: %s\n", response);
+				return -1;
+			}
+		}
+
+		if( i < 254 ) {
+			response[i] = c;
+			response[i+1] ='\0';
+			i++;
+		}
+	}
+
 }
 
 /**
-* Write data to socket.
-* Checks if data starts with .\r\n (or .\n) and sends ..\r\n
-*/
+ * Write data to socket.
+ * Checks if data starts with .\r\n (or .\n) and sends ..\r\n
+ */
 void smtp_write(int socket, char *data) {
 
 	if (strlen(data) > 1 && data[0] == '.' && (data[1] == '\r' || data[1] == '\n')) {
-        write(socket, ".", 1);
-    }
-    write(socket, data, strlen(data));
+		write(socket, ".", 1);
+	}
+	write(socket, data, strlen(data));
 }
 
 

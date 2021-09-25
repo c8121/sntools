@@ -169,13 +169,13 @@ int main(int argc, char *argv[]) {
 
 		//Store ip -> hostname
 		putMdb(ip, hostname);
-		
+
 		//Store mac -> hostname
 		putMdb(mac, hostname);
-		
-		
+
+
 		char key[64], ts[32];
-		
+
 		//Store mac -> ip
 		sprintf(key, "MacIp:%s", mac);
 		putMdb(key, ip);
@@ -183,11 +183,11 @@ int main(int argc, char *argv[]) {
 
 		//Timestamp as char* fpr putMdb
 		sprintf(ts, "%ld", (time_t)time(NULL));
-		
+
 		//Store ip -> timestamp
 		sprintf(key, "%s_ts", ip);
 		putMdb(key, ts);
-		
+
 		//Store mac -> timestamp
 		sprintf(key, "%s_ts", mac);
 		putMdb(key, ts);
