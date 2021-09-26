@@ -34,3 +34,10 @@ gcc -Wall -I./lib/liblmdb -o "$binDir/arp-history" "$sourceDir/arp-history.c" -l
 echo "Build exec-and-mail"
 cd $BASE
 gcc -Wall -o "$binDir/exec-and-mail" "$sourceDir/exec-and-mail.c" -lpthread
+
+
+
+# ------------------------
+echo "Some tests"
+cd $BASE
+gcc -Wall -o "test/smtp-util-tests" "test/smtp-util-tests.c"

@@ -65,5 +65,39 @@ void smtp_write(int socket, char *data) {
 	write(socket, data, strlen(data));
 }
 
+/**
+ * 
+ */
+void qp_test(char *data) {
+
+	int n = strlen(data);
+	int li = 0;
+	for( int i=0 ; i<n ; i++ ) {
+		if( li == 0 && data[i] == '.' && i < (n-2) && data[i+1] == '\r' && data[i+2] == '\n' ) {
+			printf(".");
+			li++;
+		}
+
+		if( i < (n-1) && data[i] == '\r' && data[i+1] == '\n' ) {
+			printf("\r\n");
+			i++;
+		} else if( (data[i] >= 32 && data[i] <= 60) || (data[i] >= 62 && data[i] <= 126) ) {
+			printf("%c", data[i]);
+			li++;
+		} else {
+			printf("=%02X", data[i]);
+			li += 3;
+		}
+
+		if( data[i] == '\r' || data[i] == '\n' ) {
+			li = 0;
+		} else if( li == 75 ) {
+			printf("=\r\n");
+			li = 0;
+		}
+	}
+
+}
+
 
 
