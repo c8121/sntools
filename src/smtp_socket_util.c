@@ -77,9 +77,16 @@ void smtp_qp_write(int socket, char *data) {
 			write(socket, ".", 1);
 			li++;
 		}
-
-		if( i < (n-1) && data[i] == '\r' && data[i+1] == '\n' ) {
+		
+		if( data[i] == '\n' ) {
+			//Single <LF> to <CR><LF>
+			write(socket, "\r\n", 2);
+		} else if( i < (n-1) && data[i] == '\r' && data[i+1] == '\n' ) {
 			//<CR><LF> as it is
+			write(socket, "\r\n", 2);
+			i++;
+		} else if ( data[i] == '\r' ) {
+			//Single <CR> to <CR><LF>
 			write(socket, "\r\n", 2);
 			i++;
 		} else if( (data[i] >= 32 && data[i] <= 60) || (data[i] >= 62 && data[i] <= 126) ) {

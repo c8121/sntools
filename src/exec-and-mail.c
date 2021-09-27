@@ -91,22 +91,25 @@ int send_buffer() {
 			return -1;
 		}
 
-		// Send header
+		// Send headers
 		snprintf(buf, sizeof(buf), "Subject: %s\r\n", subject);
 		write(socket, buf, strlen(buf));
 		snprintf(buf, sizeof(buf), "From: <%s>\r\n", envFrom);
 		write(socket, buf, strlen(buf));
 		snprintf(buf, sizeof(buf), "To: <%s>\r\n", envTo);
 		write(socket, buf, strlen(buf));
+		snprintf(buf, sizeof(buf), "Content-Transfer-Encoding: quoted-printable\r\n");
+		write(socket, buf, strlen(buf));
+		snprintf(buf, sizeof(buf), "Content-Type: text/plain\r\n");
+		write(socket, buf, strlen(buf));
 
-		// Start body
+		// Send body
 		snprintf(buf, sizeof(buf), "\r\n");
 		write(socket, buf, strlen(buf));
 
-		// Send body which has been read above
 		struct linked_item *curr = buffer;
 		while( curr != NULL ) {
-			smtp_write(socket, curr->data);
+			smtp_qp_write(socket, curr->data);
 			curr = curr->next;
 		}
 
