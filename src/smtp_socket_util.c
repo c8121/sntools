@@ -66,33 +66,40 @@ void smtp_write(int socket, char *data) {
 }
 
 /**
- * 
+ * Write text in quoted-printable encoding to socket.
  */
-void qp_test(char *data) {
+void smtp_qp_write(int socket, char *data) {
 
 	int n = strlen(data);
 	int li = 0;
 	for( int i=0 ; i<n ; i++ ) {
 		if( li == 0 && data[i] == '.' && i < (n-2) && data[i+1] == '\r' && data[i+2] == '\n' ) {
-			printf(".");
+			write(socket, ".", 1);
 			li++;
 		}
 
 		if( i < (n-1) && data[i] == '\r' && data[i+1] == '\n' ) {
-			printf("\r\n");
+			//<CR><LF> as it is
+			write(socket, "\r\n", 2);
 			i++;
 		} else if( (data[i] >= 32 && data[i] <= 60) || (data[i] >= 62 && data[i] <= 126) ) {
-			printf("%c", data[i]);
+			//Allowed chars
+			write(socket, (char*)&data[i], 1);
 			li++;
 		} else {
-			printf("=%02X", data[i]);
+			//Encoded chars
+			char tmp[4];
+			sprintf(tmp, "=%02X", data[i]);
+			write(socket, tmp, 3);
 			li += 3;
 		}
 
 		if( data[i] == '\r' || data[i] == '\n' ) {
+			//New line just started, reset line counter
 			li = 0;
 		} else if( li == 75 ) {
-			printf("=\r\n");
+			//Max line length reached
+			write(socket, "=\r\n", 3);
 			li = 0;
 		}
 	}

@@ -25,8 +25,14 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netdb.h>
+#include <time.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include "../src/smtp_socket_util.c"
+#include "../src/net_util.c"
+
 
 /**
  * 
@@ -34,7 +40,75 @@
 int main(int argc, char *argv[]) {
 
 	char *s = "Hello\n.\nTest\r\n.\r\nTest2=OK?\r\n012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789\r\nEnd";
-	qp_test(s);
-	printf("\n");
+
+	char *smtpHost = "localhost";
+	int smtpPort = 25;
+	char *envFrom = "root";
+	char *envTo = "root";
+	char *heloName = "localhost";
 	
+	int socket = open_socket(smtpHost, smtpPort);
+	char buf[1024];
+	if( socket > 0 ) {
+
+		//Read SMTP Greeting
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
+
+		snprintf(buf, sizeof(buf), "helo %s\r\n", heloName);
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
+
+		snprintf(buf, sizeof(buf), "mail from: <%s>\r\n", envFrom);
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
+
+		snprintf(buf, sizeof(buf), "rcpt to: <%s>\r\n", envTo);
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
+
+		snprintf(buf, sizeof(buf), "data\r\n");
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
+
+		// Send header
+		snprintf(buf, sizeof(buf), "Subject: Test\r\n");
+		write(socket, buf, strlen(buf));
+		snprintf(buf, sizeof(buf), "From: <%s>\r\n", envFrom);
+		write(socket, buf, strlen(buf));
+		snprintf(buf, sizeof(buf), "To: <%s>\r\n", envTo);
+		write(socket, buf, strlen(buf));
+
+		// Start body
+		snprintf(buf, sizeof(buf), "\r\n");
+		write(socket, buf, strlen(buf));
+
+		
+		smtp_qp_write(socket, s);
+		
+
+		snprintf(buf, sizeof(buf), "\r\n.\r\n");
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
+
+		snprintf(buf, sizeof(buf), "quit\r\n");
+		write(socket, buf, strlen(buf));
+		if( smtp_read(socket) != 0 ) {
+			return -1;
+		}
+
+		close(socket);
+	}
+
 }
