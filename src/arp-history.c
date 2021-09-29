@@ -92,7 +92,7 @@ void printTable() {
 		key.mv_size = 6;
 		if( mdb_cursor_get(cursor, &key, &value, MDB_SET_RANGE) == MDB_SUCCESS ) {
 
-			printf("MAC              \tIP              TS         \tDATE\n");
+			printf("MAC\tIP\tHOSTNAME\tTS\tDATE\n");
 
 			while( mdb_cursor_get(cursor, &key, &value, MDB_NEXT) == MDB_SUCCESS ) {
 
@@ -103,6 +103,14 @@ void printTable() {
 
 				char *mac = &keyName[6];
 				char *ip = (char *)value.mv_data;
+				
+				char *hostname;
+				MDB_val hostData;
+				if( getMdb(ip, &hostData) == MDB_NOTFOUND ) {
+					hostname = '\0';
+				} else {
+					hostname = hostData.mv_data;
+				}
 
 				char tsKey[64];
 				sprintf(tsKey, "%s_ts", mac);
@@ -120,7 +128,7 @@ void printTable() {
 				char timeString[32];
 				strftime(timeString, sizeof(timeString), "%a %b %d %Y", lt);
 
-				printf("%s\t%s\t%s\t%s\n", mac, ip, ts, timeString);
+				printf("%s\t%s\t%s\t%s\t%s\n", mac, ip, hostname, ts, timeString);
 			}
 		}
 		mdb_cursor_close(cursor);
