@@ -37,7 +37,7 @@ char outputFormat = '0';
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "q:m:d:t";
+	const char *options = "q:d:t";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -55,14 +55,13 @@ void configure(int argc, char *argv[]) {
 
 		case 't':
 			outputFormat = 't';
-			printf("Load data from: %s\n", mdbDataDir);
 			break;
 		}
 	}
 }
 
 /**
- * 
+ * Print out all lmdb entries
  */
 void printAllData() {
 
@@ -80,7 +79,7 @@ void printAllData() {
 }
 
 /**
- * 
+ * Print out tab separated table
  */
 void printTable() {
 
