@@ -29,37 +29,12 @@
 #include <time.h>
 
 #include "mdb.c"
+#include "net_util.c"
 
 char *arpScanCommand = "/usr/sbin/arp-scan --interface=%s --localnet -x";
 char *interface = NULL;
 
 int verbosity = 0;
-
-
-/**
- * Resolve IP to Hostname
- * @return 0 on success
- */
-int resolveIpAddress(char *ip, char *resolvedName, int size) {
-
-	struct sockaddr_in sa;
-	char service[NI_MAXSERV];
-
-	sa.sin_family = AF_INET;
-
-	if( inet_pton(AF_INET, ip, &(sa.sin_addr)) != 1 ) {
-		fprintf(stderr, "Failed to parse ip: %s\n", ip);
-		return 1;
-	}
-
-	if( getnameinfo((struct sockaddr*)(&sa), sizeof(sa), resolvedName, size, service, sizeof(service), 0) !=0 ) {
-		fprintf(stderr, "Name lookup failed: %s\n", ip);
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
 
 
 /**
@@ -137,7 +112,7 @@ int main(int argc, char *argv[]) {
 		strcpy(mac, tok);
 
 		char hostname[NI_MAXHOST];
-		resolveIpAddress(ip, hostname, sizeof(hostname));
+		resolve_ip(ip, hostname, sizeof(hostname));
 
 		if( verbosity > 0 ) {
 			printf("IP: %s, MAC: %s, Name: %s\n", ip, mac, hostname);

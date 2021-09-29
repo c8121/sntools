@@ -56,6 +56,30 @@ int resolve(const char *serverName, char *resolvedName, int size) {
 }
 
 /**
+ * Resolve IP to Hostname (reverse lookup)
+ * @return 0 on success
+ */
+int resolve_ip(char *ip, char *resolvedName, int size) {
+
+	struct sockaddr_in sa;
+	char service[NI_MAXSERV];
+
+	sa.sin_family = AF_INET;
+
+	if( inet_pton(AF_INET, ip, &(sa.sin_addr)) != 1 ) {
+		fprintf(stderr, "Failed to parse ip: %s\n", ip);
+		return 1;
+	}
+
+	if( getnameinfo((struct sockaddr*)(&sa), sizeof(sa), resolvedName, size, service, sizeof(service), 0) !=0 ) {
+		fprintf(stderr, "Name lookup failed: %s\n", ip);
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+/**
  * 
  */
 int open_socket(const char *serverName, int port) {
