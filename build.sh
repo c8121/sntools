@@ -24,6 +24,11 @@ fi
 
 
 # ------------------------
+echo "Build tools"
+cd $BASE
+gcc -Wall -o "$binDir/html" "$sourceDir/html.c"
+
+# ------------------------
 echo "Build arp-scan-util & arp-history"
 cd $BASE
 gcc -Wall -I./lib/liblmdb -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c" -llmdb

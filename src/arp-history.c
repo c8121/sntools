@@ -71,7 +71,7 @@ void printAllData() {
 	} else {
 		MDB_val key, value;
 		while( mdb_cursor_get(cursor, &key, &value, MDB_NEXT) == MDB_SUCCESS ) {
-			printf("%s = %s\n", (char *)key.mv_data, (char *)value.mv_data);
+			printf("%s\t%s\n", (char *)key.mv_data, (char *)value.mv_data);
 		}
 		mdb_cursor_close(cursor);
 	}
@@ -166,10 +166,12 @@ int main(int argc, char *argv[]) {
 		}
 	} else if ( outputFormat == 't' ) {
 
+		printf("arp history:\n\n");
 		printTable();
 
 	} else {
 
+		printf("arp database:\n\n");
 		printAllData();
 
 	}
