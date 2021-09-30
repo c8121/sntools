@@ -41,3 +41,7 @@ cd $BASE
 gcc -Wall -o "$binDir/exec-and-mail" "$sourceDir/exec-and-mail.c" -lpthread
 gcc -Wall -o "$binDir/httpd-exec" "$sourceDir/httpd-exec.c"
 
+# ------------------------
+echo "Hostwatch"
+cd $BASE
+gcc -Wall -o "$binDir/hostwatch" "$sourceDir/hostwatch.c"
