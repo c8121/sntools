@@ -37,6 +37,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define LISTEN_BACKLOG 10
 
@@ -46,9 +47,13 @@ int port = 8001;
 char *ip = "0.0.0.0";
 char *content_type = "text/plain";
 
-void writes(int client_socket, char *line) {
+int writes(int client_socket, char *line) {
 	if( send(client_socket, line, strlen(line), 0) < 0 ) {
-		fprintf(stderr, "Failed to send response\n");
+		fprintf(stderr, "### Failed to send response\n");
+		printf("### %s\n", strerror(errno));
+		return -1;
+	} else {
+		return 0;
 	}
 }
 
@@ -67,23 +72,30 @@ void respond(int client_socket) {
 		memset(buf, 0, sizeof(buf));
 	}
 
-	writes(client_socket, "HTTP/1.1 200 OK\r\n");
+	if( writes(client_socket, "HTTP/1.1 200 OK\r\n") != 0 )
+		return;
 
 	sprintf(buf, "Content-Type: %s\r\n", content_type);
-	writes(client_socket, buf);
+	if( writes(client_socket, buf) != 0 )
+		return;
 
-	writes(client_socket, "Connection: close\r\n");
-	writes(client_socket, "\r\n");
+	if( writes(client_socket, "Connection: close\r\n") != 0 )
+		return;
+	if( writes(client_socket, "\r\n") != 0 )
+		return;
 
 
 	FILE *cmd = popen(command, "r");
 	if( cmd == NULL ) {
 		fprintf(stderr, "Failed to execute: %s\n", command);
-		writes(client_socket, "Failed to execute command");
+		if( writes(client_socket, "Failed to execute command") != 0 )
+			return;
 	} else {
 
 		while( fgets(buf, sizeof(buf), cmd) ) {
-			writes(client_socket, buf);
+			if( writes(client_socket, buf) ) {
+				break;
+			}
 		}
 
 		if( feof(cmd) ) {
@@ -172,9 +184,13 @@ int main(int argc, char *argv[]) {
 	printf("Listening for connections at %s:%i\n", ip, port);
 
 	while(1) {
-		int client_socket = accept(server_socket, NULL, NULL);
+		struct sockaddr_in client_address;
+		int c = sizeof(struct sockaddr_in);
+		int client_socket = accept(server_socket, (struct sockaddr *)&client_address, (socklen_t*)&c);
 		if( client_socket > -1 ) {
-			printf("Accepted connection\n");
+			char *client_ip = inet_ntoa(client_address.sin_addr);
+			int client_port = ntohs(client_address.sin_port);
+			printf("Accepted connection: %s:%i\n", client_ip, client_port);
 			respond(client_socket);
 			close(client_socket);
 		} else {
