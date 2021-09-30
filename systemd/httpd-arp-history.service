@@ -6,7 +6,7 @@ After=network.target
 WorkingDirectory=/opt/sntools
 SyslogIdentifier=httpdarphistory
 
-ExecStart=/opt/sntools/bin/httpd-exec -p 80 -t text/html "/opt/sntools/bin/arp-history -t | /opt/sntools/bin/html"
+ExecStart=/opt/sntools/bin/httpd-exec -p 80 -c text/html "/opt/sntools/bin/arp-history -t | /opt/sntools/bin/html"
 KillMode=process
 Restart=on-failure
 
