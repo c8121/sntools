@@ -100,7 +100,7 @@ void respond(int client_socket) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "c:";
+	const char *options = "c:p:";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -109,20 +109,27 @@ void configure(int argc, char *argv[]) {
 		case 'c':
 			content_type = optarg;
 			break;
+
+
+		case 'p':
+			port = atoi(optarg);
+			break;
+
 		}
 	}
 }
+
 
 /**
  * 
  */
 void usage_message() {
-	printf("Usage: httpd-exec [-c content-type] \"<command>\"\n");
+	printf("Usage: httpd-exec [-c content-type] [-p port] \"<command>\"\n");
 }
 
 
 /**
- * 
+ * Start server, wait for connections and execute command once for each client
  */
 int main(int argc, char *argv[]) {
 
