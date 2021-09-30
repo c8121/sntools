@@ -50,7 +50,7 @@ char *content_type = "text/plain";
 int writes(int client_socket, char *line) {
 	if( send(client_socket, line, strlen(line), 0) < 0 ) {
 		fprintf(stderr, "### Failed to send response\n");
-		printf("### %s\n", strerror(errno));
+		fprintf(stderr, "### %s\n", strerror(errno));
 		return -1;
 	} else {
 		return 0;
@@ -59,41 +59,45 @@ int writes(int client_socket, char *line) {
 
 /**
  */
-void respond(int client_socket) {
+int respond(int client_socket) {
 
 	char buf[1024];
 	memset(buf, 0, sizeof(buf));
 
 	//Read request headers
-	while( read(client_socket, buf, sizeof(buf)) > 0 ) {
+	ssize_t r;
+	while( (r = read(client_socket, buf, sizeof(buf))) > 0 ) {
 		printf("%s\n", buf);
 		if( strstr(buf, "\r\n\r\n") != NULL || strstr(buf, "\n\n") != NULL )
 			break;
 		memset(buf, 0, sizeof(buf));
 	}
 
+	if( r < 0 ) {
+		fprintf(stderr, "### Failed to read request\n");
+		fprintf(stderr, "### %s\n", strerror(errno));
+		return -1;
+	}
+
 	if( writes(client_socket, "HTTP/1.1 200 OK\r\n") != 0 )
-		return;
+		return -1;
 
 	sprintf(buf, "Content-Type: %s\r\n", content_type);
 	if( writes(client_socket, buf) != 0 )
-		return;
+		return -1;
 
-	if( writes(client_socket, "Connection: close\r\n") != 0 )
-		return;
-	if( writes(client_socket, "\r\n") != 0 )
-		return;
+	if( writes(client_socket, "Connection: close\r\n\r\n") != 0 )
+		return -1;
 
 
 	FILE *cmd = popen(command, "r");
 	if( cmd == NULL ) {
 		fprintf(stderr, "Failed to execute: %s\n", command);
-		if( writes(client_socket, "Failed to execute command") != 0 )
-			return;
+		writes(client_socket, "Failed to execute command");
 	} else {
 
 		while( fgets(buf, sizeof(buf), cmd) ) {
-			if( writes(client_socket, buf) ) {
+			if( writes(client_socket, buf) != 0 ) {
 				break;
 			}
 		}
@@ -101,10 +105,12 @@ void respond(int client_socket) {
 		if( feof(cmd) ) {
 			pclose(cmd);
 		} else {
-			fprintf(stderr, "Broken pipe: %s", command);
+			fprintf(stderr, "Broken pipe: %s\n", command);
+			return -1;
 		}
 	}
 
+	return 0;
 }
 
 /**
@@ -183,16 +189,18 @@ int main(int argc, char *argv[]) {
 
 	printf("Listening for connections at %s:%i\n", ip, port);
 
+	struct sockaddr_in client_address;
+	int c = sizeof(struct sockaddr_in);
+
 	while(1) {
-		struct sockaddr_in client_address;
-		int c = sizeof(struct sockaddr_in);
 		int client_socket = accept(server_socket, (struct sockaddr *)&client_address, (socklen_t*)&c);
 		if( client_socket > -1 ) {
 			char *client_ip = inet_ntoa(client_address.sin_addr);
 			int client_port = ntohs(client_address.sin_port);
 			printf("Accepted connection: %s:%i\n", client_ip, client_port);
-			respond(client_socket);
-			close(client_socket);
+			if( respond(client_socket) == 0 ) {
+				close(client_socket);
+			}
 		} else {
 			fprintf(stderr, "accept failed\n");
 		}
