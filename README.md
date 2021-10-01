@@ -40,6 +40,12 @@ Uses `tcpdump` to monitor traffic. Counts bytes transferred between two hosts an
 Execute a command and send ouput via smtp after given number of lines or after timeout
 
     exec-and-mail [-c <buffer-line-count>] [-t <wait-timeout-seconds>] [-v] [-s <subject>] <host> <port> <from> <to> "<command>"
+    
+### httpd-exec
+
+Execute a command every time a client connects and send output to client (dangerous, use with care as any command can be used).
+
+    httpd-exec [-c <content-type] [-p port] "<command>"
 
 
 ## Bash scripts
