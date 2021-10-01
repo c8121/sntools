@@ -40,6 +40,8 @@ int verbosity = 0;
 int print_max_items = 20;
 int ignore_direction = 0;
 int strip_port_above = 1024;
+int human_readable = 0;
+
 int print_interval_seconds = 3;
 time_t last_print_data = 0;
 
@@ -97,7 +99,7 @@ struct linked_item* create_item(char *host_a, char *host_b) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:m:vx";
+	const char *options = "i:m:vxh";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -108,13 +110,17 @@ void configure(int argc, char *argv[]) {
 			printf("Select interface: %s\n", interface);
 			break;
 
+		case 'm':
+			strip_port_above = atoi(optarg);
+			printf("Will not show ports above %i\n", strip_port_above);
+			break;
+
 		case 'x':
 			ignore_direction = 1;
 			break;
 
-		case 'm':
-			strip_port_above = atoi(optarg);
-			printf("Will not show ports above %i\n", strip_port_above);
+		case 'h':
+			human_readable = 1;
 			break;
 
 		case 'v':
@@ -122,6 +128,19 @@ void configure(int argc, char *argv[]) {
 			break;
 		}
 	}
+}
+
+/**
+ * 
+ */
+void readable_bytes(double bytes, char *buf) {
+	int i = 0;
+	const char* units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
+	while (bytes > 1024) {
+		bytes /= 1024;
+		i++;
+	}
+	sprintf(buf, "%.*f %s", i, bytes, units[i]);
 }
 
 /**
@@ -143,11 +162,19 @@ void print_data() {
 
 	struct linked_item *curr = data;
 	struct host_data *curr_data;
+	char bytes_s[32];
 	int num = 0;
 	while (curr != NULL && num < print_max_items) {
 
 		curr_data = (struct host_data*) curr->data;
-		printf("%s\t%s\t%ub\n", curr_data->host_a, curr_data->host_b, curr_data->bytes);
+
+		if( human_readable ) {
+			readable_bytes(curr_data->bytes, bytes_s);
+		} else {
+			sprintf(bytes_s, "%u", curr_data->bytes);
+		}
+
+		printf("%s\t%s\t%s\n", curr_data->host_a, curr_data->host_b, bytes_s);
 
 		curr = curr->next;
 		num++;
