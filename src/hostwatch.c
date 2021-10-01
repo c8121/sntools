@@ -39,6 +39,7 @@ char *interface = NULL;
 int verbosity = 0;
 int print_max_items = 20;
 int ignore_direction = 0;
+int strip_port_above = 1024;
 int print_interval_seconds = 3;
 time_t last_print_data = 0;
 
@@ -96,7 +97,7 @@ struct linked_item* create_item(char *host_a, char *host_b) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:vx";
+	const char *options = "i:m:vx";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -109,6 +110,11 @@ void configure(int argc, char *argv[]) {
 
 		case 'x':
 			ignore_direction = 1;
+			break;
+
+		case 'm':
+			strip_port_above = atoi(optarg);
+			printf("Will not show ports above %i\n", strip_port_above);
 			break;
 
 		case 'v':
@@ -194,7 +200,18 @@ void sort_data() {
 }
 
 
-
+/**
+ * 
+ */
+void strip_port(char *address) {
+	char *p = strrchr(address, '.');
+	if( p != NULL ) {
+		int port = atoi(p+1);
+		if( port > strip_port_above ) {
+			p[0] = '\0';
+		}
+	}
+}
 
 /**
  * 
@@ -250,6 +267,11 @@ int main(int argc, char *argv[]) {
 
 						memset(toAddress, 0, sizeof(toAddress));
 						strncpy(toAddress, p1 + 3, p2 - p1 - 3);
+
+						if( strip_port_above > 0 ) {
+							strip_port(fromAddress);
+							strip_port(toAddress);
+						}
 
 						int bytes = atoi(p3 + 7);
 
