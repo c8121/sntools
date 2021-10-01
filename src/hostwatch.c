@@ -48,7 +48,7 @@ time_t last_print_data = 0;
 struct host_data {
 	char host_a[255];
 	char host_b[255];
-	unsigned int bytes;
+	unsigned long bytes;
 };
 
 struct linked_item *data = NULL;
@@ -99,7 +99,7 @@ struct linked_item* create_item(char *host_a, char *host_b) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:m:vxh";
+	const char *options = "i:m:n:vxh";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -113,6 +113,11 @@ void configure(int argc, char *argv[]) {
 		case 'm':
 			strip_port_above = atoi(optarg);
 			printf("Will not show ports above %i\n", strip_port_above);
+			break;
+
+		case 'n':
+			print_max_items = atoi(optarg);
+			printf("Will show max. %i items\n", print_max_items);
 			break;
 
 		case 'x':
@@ -171,7 +176,7 @@ void print_data() {
 		if( human_readable ) {
 			readable_bytes(curr_data->bytes, bytes_s);
 		} else {
-			sprintf(bytes_s, "%u", curr_data->bytes);
+			sprintf(bytes_s, "%lu", curr_data->bytes);
 		}
 
 		printf("%s\t%s\t%s\n", curr_data->host_a, curr_data->host_b, bytes_s);
@@ -321,7 +326,7 @@ int main(int argc, char *argv[]) {
 						item_data = (struct host_data*) item->data;
 						item_data->bytes += bytes;
 						if (verbosity > 0) {
-							printf("Update: %s -> %s: %ub\n", item_data->host_a,
+							printf("Update: %s -> %s: %lub\n", item_data->host_a,
 									item_data->host_b, item_data->bytes);
 						}
 
