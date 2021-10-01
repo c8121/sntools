@@ -19,40 +19,96 @@
 
 
 struct linked_item {
-    void *data;
-    struct linked_item *next;
+	void *data;
+	struct linked_item *next;
 };
 
 /**
  * Count all items beginning as given start (including start)
  */
 int linked_item_count(struct linked_item *start) {
-    int c = 0;
-    struct linked_item *curr = start;
-    while( curr != NULL ) {
-        c++;
-        curr = curr->next;
-    }
-    return c;
+	int c = 0;
+	struct linked_item *curr = start;
+	while( curr != NULL ) {
+		c++;
+		curr = curr->next;
+	}
+	return c;
 }
 
+/**
+ * Get last item from chain, starting at given point.
+ */
+struct linked_item* linked_item_last(struct linked_item *start) {
+	struct linked_item *curr = start;
+	while( curr != NULL ) {
+		if( curr->next == NULL ) {
+			return curr;
+		}
+		curr = curr->next;
+	}
+	return NULL;
+}
+
+/**
+ * Return new start item of chain
+ */
+struct linked_item* linked_item_insert_before(struct linked_item *insert, struct linked_item *before, struct linked_item *start) {
+	struct linked_item *last = NULL;
+	struct linked_item *curr = start;
+	while( curr != NULL ) {
+		if( curr == before ) {
+			insert->next = before;
+			if( last != NULL ) {
+				last->next = insert;
+				return start;
+			} else {
+				return insert;
+			}
+		}
+		last = curr;
+		curr = curr->next;
+	}
+	return start;
+}
+
+/**
+ * Return new start item of chain
+ */
+struct linked_item* linked_item_remove(struct linked_item *remove, struct linked_item *start) {
+	struct linked_item *last = NULL;
+	struct linked_item *curr = start;
+	while( curr != NULL ) {
+		if( curr == remove ) {
+			if( last != NULL ) {
+				last->next = remove->next;
+				return start;
+			} else {
+				return remove->next;
+			}
+		}
+		last = curr;
+		curr = curr->next;
+	}
+	return start;
+}
 
 
 /**
  * Free memory of whole chain
  */
 void linked_item_free(struct linked_item *start) {
-    if( start == NULL ) {
-        return;
-    }
-    
-    if( start->data != NULL ) {
-        free(start->data);
-    }
-    
-    if( start->next != NULL ) {    
-    	linked_item_free(start->next);
-    }
-    
-    free(start);
+	if( start == NULL ) {
+		return;
+	}
+
+	if( start->data != NULL ) {
+		free(start->data);
+	}
+
+	if( start->next != NULL ) {    
+		linked_item_free(start->next);
+	}
+
+	free(start);
 }
