@@ -110,7 +110,7 @@ void configure(int argc, char *argv[]) {
 		case 'x':
 			ignore_direction = 1;
 			break;
-			
+
 		case 'v':
 			verbosity++;
 			break;
@@ -136,11 +136,12 @@ void print_data() {
 	printf("---====A====---\t---====B====---\t---====bytes====---\n");
 
 	struct linked_item *curr = data;
+	struct host_data *curr_data;
 	int num = 0;
 	while (curr != NULL && num < print_max_items) {
 
-		struct host_data *data = (struct host_data*) curr->data;
-		printf("%s\t%s\t%ub\n", data->host_a, data->host_b, data->bytes);
+		curr_data = (struct host_data*) curr->data;
+		printf("%s\t%s\t%ub\n", curr_data->host_a, curr_data->host_b, curr_data->bytes);
 
 		curr = curr->next;
 		num++;
@@ -160,13 +161,16 @@ void sort_data() {
 		return;
 	}
 
+	struct linked_item *last;
+	struct host_data *last_data;
+	struct linked_item *curr;
+	struct host_data *curr_data;
+
 	int changed = 0;
 	do {
 		changed = 0;
-		struct linked_item *last = NULL;
-		struct host_data *last_data = NULL;
-		struct linked_item *curr = data;
-		struct host_data *curr_data = NULL;
+		last = NULL;
+		curr = data;
 
 		while( curr != NULL ) {
 
@@ -225,6 +229,11 @@ int main(int argc, char *argv[]) {
 		//                                                         ^ p2
 		//                                                                                                      ^ p3
 
+		char fromAddress[64];
+		char toAddress[64];
+		struct linked_item *item;
+		struct host_data *item_data;
+
 		char *p1 = strstr(line, " > ");
 		if (p1 != NULL) {
 			char *p2 = strstr(p1, ": ");
@@ -236,11 +245,9 @@ int main(int argc, char *argv[]) {
 					char *p3 = strstr(p2, "length ");
 					if (p3 != NULL) {
 
-						char fromAddress[64];
 						memset(fromAddress, 0, sizeof(fromAddress));
 						strncpy(fromAddress, p0 + 1, p1 - p0 - 1);
 
-						char toAddress[64];
 						memset(toAddress, 0, sizeof(toAddress));
 						strncpy(toAddress, p1 + 3, p2 - p1 - 3);
 
@@ -251,8 +258,7 @@ int main(int argc, char *argv[]) {
 									bytes);
 						}
 
-						struct linked_item *item = find_item(fromAddress,
-								toAddress);
+						item = find_item(fromAddress, toAddress);
 						if (item == NULL) {
 							if( ignore_direction ) {
 								item = find_item(toAddress, fromAddress);
@@ -263,11 +269,11 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
-						struct host_data *data = (struct host_data*) item->data;
-						data->bytes += bytes;
+						item_data = (struct host_data*) item->data;
+						item_data->bytes += bytes;
 						if (verbosity > 0) {
-							printf("Update: %s -> %s: %ub\n", data->host_a,
-									data->host_b, data->bytes);
+							printf("Update: %s -> %s: %ub\n", item_data->host_a,
+									item_data->host_b, item_data->bytes);
 						}
 
 						sort_data();
@@ -276,7 +282,7 @@ int main(int argc, char *argv[]) {
 							print_data();
 							last_print_data = curr_time;
 						}
-						
+
 					}
 
 				}
