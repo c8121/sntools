@@ -138,14 +138,14 @@ void configure(int argc, char *argv[]) {
 /**
  * 
  */
-void readable_bytes(double bytes, char *buf) {
+void readable_bytes(unsigned long bytes, char *buf) {
 	int i = 0;
 	const char* units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
 	while (bytes > 1024) {
 		bytes /= 1024;
 		i++;
 	}
-	sprintf(buf, "%.*f %s", i, bytes, units[i]);
+	sprintf(buf, "%lu %s", bytes, units[i]);
 }
 
 /**
@@ -305,10 +305,10 @@ int main(int argc, char *argv[]) {
 							strip_port(toAddress);
 						}
 
-						int bytes = atoi(p3 + 7);
+						unsigned long bytes = atoi(p3 + 7);
 
 						if (verbosity > 1) {
-							printf("%s -> %s: %ib\n", fromAddress, toAddress,
+							printf("%s -> %s: %lub\n", fromAddress, toAddress,
 									bytes);
 						}
 
