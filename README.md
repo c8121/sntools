@@ -50,11 +50,24 @@ Execute a command and send ouput via smtp after given number of lines or after t
 
     exec-and-mail [-c <buffer-line-count>] [-t <wait-timeout-seconds>] [-v] [-s <subject>] <host> <port> <from> <to> "<command>"
     
+Parameter     | Description
+--------------| -----------
+c             | How may lines from command to read before sending an e-mail
+t             | How long to wait (in seconds) before sending an e-mail it there is at least one line
+v             | Enable verbose mode (repeat v for more output)
+s             | E-mail subject
+    
+    
 ### httpd-exec
 
 Execute a command every time a client connects and send output to client (dangerous, use with care as any command can be used).
 
-    httpd-exec [-c <content-type] [-p port] "<command>"
+    httpd-exec [-c <content-type] [-p <port>] "<command>"
+    
+Parameter     | Description
+--------------| -----------
+c             | Response content-type (default is "text/plain")
+p             | Port to bind to (default is 8001)
 
 
 ## Bash scripts
