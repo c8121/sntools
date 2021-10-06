@@ -68,7 +68,7 @@ Parameter     | Description
 --------------| -----------
 c             | Response content-type (default is "text/plain")
 p             | Port to bind to (default is 8001)
-
+v             | Enable verbose mode
 
 ## Bash scripts
 
