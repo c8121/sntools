@@ -96,9 +96,16 @@ int respond(int client_socket) {
 		writes(client_socket, "Failed to execute command");
 	} else {
 
+		int can_send = 1;
 		while( fgets(buf, sizeof(buf), cmd) ) {
-			if( writes(client_socket, buf) != 0 ) {
-				break;
+			if( can_send ) {
+				if( writes(client_socket, buf) != 0 ) {
+					can_send = 0;
+					fprintf(stderr, "Lost connection during command: %s\n", command);
+				}
+			}
+			if( !can_send ) {
+				fprintf(stderr, "Cannot send: %s\n", buf);
 			}
 		}
 
