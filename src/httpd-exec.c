@@ -47,6 +47,7 @@ int port = 8001;
 char *ip = "0.0.0.0";
 char *content_type = "text/plain";
 
+int verbosity = 0;
 
 
 /**
@@ -74,7 +75,9 @@ int respond(int client_socket) {
 	//Read request headers
 	ssize_t r;
 	while( (r = read(client_socket, buf, sizeof(buf))) > 0 ) {
-		printf("%s\n", buf);
+		if( verbosity > 0 ) {
+			printf("%s\n", buf);
+		}
 		if( strstr(buf, "\r\n\r\n") != NULL || strstr(buf, "\n\n") != NULL )
 			break;
 		memset(buf, 0, sizeof(buf));
@@ -132,7 +135,7 @@ int respond(int client_socket) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "c:p:";
+	const char *options = "c:p:v";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -145,6 +148,10 @@ void configure(int argc, char *argv[]) {
 
 		case 'p':
 			port = atoi(optarg);
+			break;
+
+		case 'v':
+			verbosity++;
 			break;
 
 		}
