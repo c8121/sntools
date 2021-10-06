@@ -47,6 +47,12 @@ int port = 8001;
 char *ip = "0.0.0.0";
 char *content_type = "text/plain";
 
+
+
+/**
+ * Send data to client.
+ * Return 0 on success, -1 on error
+ */
 int writes(int client_socket, char *line) {
 	if( send(client_socket, line, strlen(line), 0) < 0 ) {
 		fprintf(stderr, "### Failed to send response\n");
@@ -58,6 +64,7 @@ int writes(int client_socket, char *line) {
 }
 
 /**
+ * Handle HTTP-Request, send response (header, body)
  */
 int respond(int client_socket) {
 
