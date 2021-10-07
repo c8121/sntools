@@ -42,6 +42,11 @@ gcc -Wall -o "$binDir/exec-and-mail" "$sourceDir/exec-and-mail.c" -lpthread
 gcc -Wall -o "$binDir/httpd-exec" "$sourceDir/httpd-exec.c"
 
 # ------------------------
-echo "Hostwatch"
+echo "Build Hostwatch"
 cd $BASE
 gcc -Wall -o "$binDir/hostwatch" "$sourceDir/hostwatch.c"
+
+# ------------------------
+echo "Build snort-scan-util"
+cd $BASE
+gcc -Wall -o "$binDir/snort-scan-util" "$sourceDir/snort-scan-util.c"
