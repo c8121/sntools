@@ -112,3 +112,44 @@ void linked_item_free(struct linked_item *start) {
 
 	free(start);
 }
+
+/**
+ * Return new start item of chain
+ */
+struct linked_item* linked_item_sort(struct linked_item *start, int (*compare_function)(struct linked_item *a, struct linked_item *b)) {
+
+	if (start == NULL) {
+		return start;
+	}
+
+	struct linked_item *last;
+	struct linked_item *curr;
+
+	int changed = 0;
+	do {
+		changed = 0;
+		last = NULL;
+		curr = start;
+
+		while( curr != NULL ) {
+
+			if( last != NULL ) {
+				
+				int comp = (*compare_function)(last, curr);
+				
+				if( comp > 0 ) {
+					start = linked_item_remove(curr, start);
+					start = linked_item_insert_before(curr, last, start);
+					changed++;
+				}
+			}
+			if( curr != NULL ) {
+				last = curr;
+				curr = curr->next;
+			}
+		}
+
+	} while( changed > 0 );
+	
+	return start;
+}

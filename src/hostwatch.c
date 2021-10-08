@@ -191,44 +191,16 @@ void print_data() {
 
 
 /**
- * 
+ * comparison of bytes, used by linked_item_sort
  */
-void sort_data() {
-
-	if (data == NULL) {
-		return;
-	}
-
-	struct linked_item *last;
-	struct host_data *last_data;
-	struct linked_item *curr;
-	struct host_data *curr_data;
-
-	int changed = 0;
-	do {
-		changed = 0;
-		last = NULL;
-		curr = data;
-
-		while( curr != NULL ) {
-
-			if( last != NULL ) {
-				last_data = (struct host_data*) last->data;
-				curr_data = (struct host_data*) curr->data;
-				if( curr_data->bytes > last_data->bytes ) {
-					data = linked_item_remove(curr, data);
-					data = linked_item_insert_before(curr, last, data);
-					changed++;
-				}
-			}
-			if( curr != NULL ) {
-				last = curr;
-				curr = curr->next;
-			}
-		}
-
-	} while( changed > 0 );
-
+int compare(struct linked_item *a, struct linked_item *b) {
+	struct host_data *a_data = (struct host_data*) a->data;
+	struct host_data *b_data = (struct host_data*) b->data;
+	
+	if( b_data->bytes > a_data->bytes )
+		return 1;
+	else
+		return 0;
 }
 
 
@@ -330,7 +302,7 @@ int main(int argc, char *argv[]) {
 									item_data->host_b, item_data->bytes);
 						}
 
-						sort_data();
+						data = linked_item_sort(data, &compare);
 						time_t curr_time = time(NULL);
 						if( (curr_time - last_print_data) > (print_interval_seconds) ) {
 							print_data();

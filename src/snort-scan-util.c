@@ -165,51 +165,17 @@ void print_data() {
 }
 
 /**
- * 
+ * comparison of prio and hits, used by linked_item_sort
  */
-void sort_data() {
-
-	if (data == NULL) {
-		return;
-	}
-
-	struct linked_item *last;
-	struct event_data *last_data;
-	struct linked_item *curr;
-	struct event_data *curr_data;
-	unsigned long last_score;
-	unsigned long curr_score;
-
-	int changed = 0;
-	do {
-		changed = 0;
-		last = NULL;
-		curr = data;
-
-		while( curr != NULL ) {
-
-			if( last != NULL ) {
-				
-				last_data = (struct event_data*) last->data;
-				last_score = last_data->latest_prio * -100000 + last_data->hit_count;
-				curr_data = (struct event_data*) curr->data;
-				curr_score = curr_data->latest_prio * -100000 + curr_data->hit_count;
-				
-				if( curr_score > last_score ) {
-					data = linked_item_remove(curr, data);
-					data = linked_item_insert_before(curr, last, data);
-					changed++;
-				}
-			}
-			if( curr != NULL ) {
-				last = curr;
-				curr = curr->next;
-			}
-		}
-
-	} while( changed > 0 );
-
+int compare(struct linked_item *a, struct linked_item *b) {
+	struct event_data *a_data = (struct event_data*) a->data;
+	struct event_data *b_data = (struct event_data*) b->data;
+	unsigned long a_score = a_data->latest_prio * -100000 + a_data->hit_count;
+	unsigned long b_score = b_data->latest_prio * -100000 + b_data->hit_count;
+	
+	return b_score > a_score ? 1 : 0;
 }
+
 
 /**
  * 
@@ -279,7 +245,7 @@ int main(int argc, char *argv[]) {
 			if( p3 != NULL ) {
 				prio = atoi(p3 + 9);
 			}
-			
+
 			if( strip_src_port ) {
 				strip_port(host_src);
 			}
@@ -291,22 +257,22 @@ int main(int argc, char *argv[]) {
 			char message[1024];
 			memset(message, 0, sizeof(message));
 			strncpy(message, line, p0 - line -1);
-			
+
 			struct linked_item *item;
 			struct event_data *item_data;
-			
+
 			item = find_item(host_src, host_dst);
 			if( item == NULL ) {
 				item = create_item(host_src, host_dst);
 			}
-			
+
 			item_data = (struct event_data*) item->data;
 			strcpy(item_data->latest_proto, proto);
 			strcpy(item_data->latest_message, message);
 			item_data->hit_count++;
 			item_data->latest_prio = prio;
 
-			sort_data();
+			data = linked_item_sort(data, &compare);
 			print_data();
 		}
 	}
