@@ -48,6 +48,7 @@ struct event_data {
 	int hit_count;
 	char latest_proto[10];
 	char latest_message[1024];
+	int latest_prio;
 };
 
 struct linked_item *data = NULL;
@@ -91,6 +92,7 @@ struct linked_item* create_item(char *host_src, char *host_dst) {
 	data->hit_count = 0;
 	data->latest_proto[0] = '\0';
 	data->latest_message[0] = '\0';
+	data->latest_prio = 99;
 
 	return item;
 }
@@ -175,6 +177,8 @@ void sort_data() {
 	struct event_data *last_data;
 	struct linked_item *curr;
 	struct event_data *curr_data;
+	unsigned long last_score;
+	unsigned long curr_score;
 
 	int changed = 0;
 	do {
@@ -185,9 +189,13 @@ void sort_data() {
 		while( curr != NULL ) {
 
 			if( last != NULL ) {
+				
 				last_data = (struct event_data*) last->data;
+				last_score = last_data->latest_prio * 100000 + last_data->hit_count;
 				curr_data = (struct event_data*) curr->data;
-				if( curr_data->hit_count > last_data->hit_count ) {
+				curr_score = curr_data->latest_prio * 100000 + curr_data->hit_count;
+				
+				if( curr_score > last_score ) {
 					data = linked_item_remove(curr, data);
 					data = linked_item_insert_before(curr, last, data);
 					changed++;
@@ -250,6 +258,7 @@ int main(int argc, char *argv[]) {
 		//                                                                                                                                ^ p0
 		//                                                                                                                                    ^ p1
 		//                                                                                                                                                         ^ p2
+		//                                                                                                                  ^ p3
 
 
 		char *p0 = strstr(line, "{");
@@ -265,6 +274,12 @@ int main(int argc, char *argv[]) {
 			memset(host_src, 0, sizeof(host_src));
 			strncpy(host_src, p1 + 2, p2 - p1 - 2);
 
+			int prio = 99;
+			char *p3 = strstr(line, "Priority:");
+			if( p3 != NULL ) {
+				prio = atoi(p3 + 9);
+			}
+			
 			if( strip_src_port ) {
 				strip_port(host_src);
 			}
@@ -289,6 +304,7 @@ int main(int argc, char *argv[]) {
 			strcpy(item_data->latest_proto, proto);
 			strcpy(item_data->latest_message, message);
 			item_data->hit_count++;
+			item_data->latest_prio = prio;
 
 			sort_data();
 			print_data();
