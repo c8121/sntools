@@ -140,12 +140,13 @@ void configure(int argc, char *argv[]) {
  */
 void readable_bytes(unsigned long bytes, char *buf) {
 	int i = 0;
+	double result = bytes;
 	const char* units[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
-	while (bytes > 1024) {
-		bytes /= 1024;
+	while (result > 1024) {
+		result /= 1024;
 		i++;
 	}
-	sprintf(buf, "%lu %s", bytes, units[i]);
+	sprintf(buf, "%.2f %s", result, units[i]);
 }
 
 /**
