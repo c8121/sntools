@@ -191,9 +191,9 @@ void sort_data() {
 			if( last != NULL ) {
 				
 				last_data = (struct event_data*) last->data;
-				last_score = last_data->latest_prio * 100000 + last_data->hit_count;
+				last_score = last_data->latest_prio * -100000 + last_data->hit_count;
 				curr_data = (struct event_data*) curr->data;
-				curr_score = curr_data->latest_prio * 100000 + curr_data->hit_count;
+				curr_score = curr_data->latest_prio * -100000 + curr_data->hit_count;
 				
 				if( curr_score > last_score ) {
 					data = linked_item_remove(curr, data);
