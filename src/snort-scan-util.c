@@ -38,14 +38,69 @@ char *interface = NULL;
 char *home_network = NULL;
 char *snort_conf = "/etc/snort/snort.conf";
 
+int print_max_items = 20;
+int strip_src_port = 0;
 int verbosity = 0;
+
+struct event_data {
+	char host_src[255];
+	char host_dst[255];
+	int hit_count;
+	char latest_proto[10];
+	char latest_message[1024];
+};
+
+struct linked_item *data = NULL;
+
+/**
+ * 
+ */
+struct linked_item* find_item(char *host_src, char *host_dst) {
+	struct linked_item *item = data;
+	while (item != NULL) {
+		struct event_data *data = item->data;
+		if (strcmp(data->host_src, host_src) == 0) {
+			if (strcmp(data->host_dst, host_dst) == 0) {	
+				return item;
+			}
+		}
+		item = item->next;
+	}
+
+	return NULL;
+}
+
+/**
+ * 
+ */
+struct linked_item* create_item(char *host_src, char *host_dst) {
+	struct linked_item *item;
+	if (data == NULL) {
+		data = malloc(sizeof(struct linked_item));
+		item = data;
+	} else {
+		struct linked_item *last = linked_item_last(data);
+		item = malloc(sizeof(struct linked_item));
+		last->next = item;
+	}
+
+	item->data = malloc(sizeof(struct event_data));
+	struct event_data *data = (struct event_data*) item->data;
+	strcpy(data->host_src, host_src);
+	strcpy(data->host_dst, host_dst);
+	data->hit_count = 0;
+	data->latest_proto[0] = '\0';
+	data->latest_message[0] = '\0';
+
+	return item;
+}
 
 /**
  * Read command line arguments and configure application
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:h:v";
+	const char *options = "i:h:vs";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -61,10 +116,100 @@ void configure(int argc, char *argv[]) {
 			printf("Home network: %s\n", home_network);
 			break;
 
+		case 's':
+			strip_src_port = 1;
+			printf("Will strip port from source\n");
+			break;
+
 		case 'v':
 			verbosity++;
 			break;
 		}
+	}
+}
+
+/**
+ * 
+ */
+void print_data() {
+
+	if( verbosity == 0 ) {
+		//Clear screen (POSIX only)
+		printf("\e[1;1H\e[2J");
+	}
+
+	if (data == NULL) {
+		printf("No data available yet...\n");
+		return;
+	}
+
+
+	struct linked_item *curr = data;
+	struct event_data *curr_data;
+	int num = 0;
+	while (curr != NULL && num < print_max_items) {
+
+		curr_data = (struct event_data*) curr->data;
+		printf("%s\t%s\t(%s)\n", curr_data->host_src, curr_data->host_dst, curr_data->latest_proto);
+		printf("\tHits: %i\n", curr_data->hit_count);
+		printf("\t%s\n", curr_data->latest_message);
+
+		curr = curr->next;
+		num++;
+	}
+
+	printf("\n");
+	printf("Count: %i\n", linked_item_count(data));
+}
+
+/**
+ * 
+ */
+void sort_data() {
+
+	if (data == NULL) {
+		return;
+	}
+
+	struct linked_item *last;
+	struct event_data *last_data;
+	struct linked_item *curr;
+	struct event_data *curr_data;
+
+	int changed = 0;
+	do {
+		changed = 0;
+		last = NULL;
+		curr = data;
+
+		while( curr != NULL ) {
+
+			if( last != NULL ) {
+				last_data = (struct event_data*) last->data;
+				curr_data = (struct event_data*) curr->data;
+				if( curr_data->hit_count > last_data->hit_count ) {
+					data = linked_item_remove(curr, data);
+					data = linked_item_insert_before(curr, last, data);
+					changed++;
+				}
+			}
+			if( curr != NULL ) {
+				last = curr;
+				curr = curr->next;
+			}
+		}
+
+	} while( changed > 0 );
+
+}
+
+/**
+ * 
+ */
+void strip_port(char *address) {
+	char *p = strrchr(address, ':');
+	if( p != NULL ) {
+		p[0] = '\0';
 	}
 }
 
@@ -105,25 +250,48 @@ int main(int argc, char *argv[]) {
 		//                                                                                                                                ^ p0
 		//                                                                                                                                    ^ p1
 		//                                                                                                                                                         ^ p2
-		
+
 
 		char *p0 = strstr(line, "{");
 		char *p1 = strstr(line, "}");
 		char *p2 = strstr(line, " -> ");
 		if( p0 != NULL && p1 != NULL && p2 != NULL ) {
-			
+
 			char proto[10];
 			memset(proto, 0, sizeof(proto));
 			strncpy(proto, p0 + 1, p1 - p0 - 1);
-			
+
 			char host_src[128];
 			memset(host_src, 0, sizeof(host_src));
 			strncpy(host_src, p1 + 2, p2 - p1 - 2);
-			
+
+			if( strip_src_port ) {
+				strip_port(host_src);
+			}
+
 			char host_dst[128];
-			strncpy(host_dst, p2 + 4, line + strlen(line) - p2 -2);
+			memset(host_dst, 0, sizeof(host_dst));
+			strncpy(host_dst, p2 + 4, line + strlen(line) - p2 -5);
+
+			char message[1024];
+			memset(message, 0, sizeof(message));
+			strncpy(message, line, p0 - line -1);
 			
-			printf("PROTO=%s, HOST_SRC=%s, HOST_DST=%s...\n", proto, host_src, host_dst);
+			struct linked_item *item;
+			struct event_data *item_data;
+			
+			item = find_item(host_src, host_dst);
+			if( item == NULL ) {
+				item = create_item(host_src, host_dst);
+			}
+			
+			item_data = (struct event_data*) item->data;
+			strcpy(item_data->latest_proto, proto);
+			strcpy(item_data->latest_message, message);
+			item_data->hit_count++;
+
+			sort_data();
+			print_data();
 		}
 	}
 
