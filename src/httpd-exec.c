@@ -39,6 +39,8 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include "net_srv_util.c"
+
 #define LISTEN_BACKLOG 10
 
 char *command;
@@ -131,6 +133,13 @@ int respond(int client_socket) {
 }
 
 /**
+ * 
+ */
+void handle_request(int client_socket, struct sockaddr_in *client_address) {
+	respond(client_socket);
+}
+
+/**
  * Read command line arguments and configure application
  */
 void configure(int argc, char *argv[]) {
@@ -191,39 +200,10 @@ int main(int argc, char *argv[]) {
 	printf("WARNING: The command '%s' will be executed every time a client connects and the output will sent directly to the client!\n", command);
 	printf("WARNING: USE AT OWN RISK!\n");
 
-	int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-
-	struct sockaddr_in bind_address;
-	bind_address.sin_family = AF_INET;
-	bind_address.sin_port = htons(port);
-	bind_address.sin_addr.s_addr = inet_addr(ip);
-
-	if( bind(server_socket, (struct sockaddr *)&bind_address, sizeof(bind_address)) != 0 ){
-		fprintf(stderr, "Failed to bind to %s:%i\n", ip, port);
+	int server_socket = create_server_socket(ip, port);
+	if( server_socket < 0 ) {
 		exit(EX_IOERR);
 	}
 
-	if( listen(server_socket, LISTEN_BACKLOG) != 0 ) {
-		fprintf(stderr, "Cannot listen to %s:%i\n", ip, port);
-		exit(EX_IOERR);   
-	}
-
-	printf("Listening for connections at %s:%i\n", ip, port);
-
-	struct sockaddr_in client_address;
-	int c = sizeof(struct sockaddr_in);
-
-	while(1) {
-		int client_socket = accept(server_socket, (struct sockaddr *)&client_address, (socklen_t*)&c);
-		if( client_socket > -1 ) {
-			char *client_ip = inet_ntoa(client_address.sin_addr);
-			int client_port = ntohs(client_address.sin_port);
-			printf("Accepted connection: %s:%i\n", client_ip, client_port);
-			if( respond(client_socket) == 0 ) {
-				close(client_socket);
-			}
-		} else {
-			fprintf(stderr, "accept failed\n");
-		}
-	}
+	accept_loop(server_socket, &handle_request);
 }
