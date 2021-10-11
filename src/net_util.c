@@ -17,6 +17,7 @@
  * Author: christian c8121 de
  */
 
+#include <errno.h>
 
 /**
  * 
@@ -113,4 +114,18 @@ int open_socket(const char *serverName, int port) {
 	}
 
 	return sockfd;
+}
+
+/**
+ * Send data to client.
+ * Return 0 on success, -1 on error
+ */
+int writes(int client_socket, char *line) {
+	if( send(client_socket, line, strlen(line), 0) < 0 ) {
+		fprintf(stderr, "### Failed to send response\n");
+		fprintf(stderr, "### %s\n", strerror(errno));
+		return -1;
+	} else {
+		return 0;
+	}
 }

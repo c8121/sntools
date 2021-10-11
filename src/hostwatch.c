@@ -32,6 +32,8 @@
 #include <errno.h>
 
 #include "linked_items.c"
+#include "net_srv_util.c"
+#include "httpd_util.c"
 
 char *tcpdump_command = "tcpdump -ni %s";
 char *interface = NULL;
@@ -45,6 +47,10 @@ int human_readable = 0;
 int print_interval_seconds = 3;
 time_t last_print_data = 0;
 
+char *server_ip = NULL;
+int server_port = 8002;
+
+
 struct host_data {
 	char host_a[255];
 	char host_b[255];
@@ -52,6 +58,9 @@ struct host_data {
 };
 
 struct linked_item *data = NULL;
+pthread_mutex_t update_data_mutex;
+
+struct linked_item *out = NULL;
 
 /**
  * 
@@ -99,7 +108,7 @@ struct linked_item* create_item(char *host_a, char *host_b) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:m:n:vxh";
+	const char *options = "i:m:n:s:p:vxh";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -128,6 +137,14 @@ void configure(int argc, char *argv[]) {
 			human_readable = 1;
 			break;
 
+		case 's':
+			server_ip = optarg;
+			break;
+
+		case 'p':
+			server_port = atoi(optarg);
+			break;
+
 		case 'v':
 			verbosity++;
 			break;
@@ -149,6 +166,47 @@ void readable_bytes(unsigned long bytes, char *buf) {
 	sprintf(buf, "%.2f %s", result, units[i]);
 }
 
+
+/**
+ * 
+ */
+void create_out() {
+
+	if( out != NULL ) {
+		linked_item_free(out);
+	}
+
+	out = linked_item_appends(NULL, "---====A====---\t---====B====---\t---====bytes====---\n");
+	struct linked_item *curr_out = out;
+
+	struct linked_item *curr = data;
+	struct host_data *curr_data;
+	char buff[1024];
+	char bytes_s[32];
+	int num = 0;
+	while (curr != NULL && num < print_max_items) {
+
+		curr_data = (struct host_data*) curr->data;
+
+		if( human_readable ) {
+			readable_bytes(curr_data->bytes, bytes_s);
+		} else {
+			sprintf(bytes_s, "%lu", curr_data->bytes);
+		}
+
+		sprintf(buff, "%s\t%s\t%s\n", curr_data->host_a, curr_data->host_b, bytes_s);
+		curr_out = linked_item_appends(curr_out, buff);
+
+
+		curr = curr->next;
+		num++;
+	}
+
+	curr_out = linked_item_appends(curr_out, "\n");
+	sprintf(buff, "Count: %i\n", linked_item_count(data));
+	linked_item_appends(curr_out, buff);
+}
+
 /**
  * 
  */
@@ -164,30 +222,15 @@ void print_data() {
 		return;
 	}
 
-	printf("---====A====---\t---====B====---\t---====bytes====---\n");
+	pthread_mutex_lock(&update_data_mutex);
 
-	struct linked_item *curr = data;
-	struct host_data *curr_data;
-	char bytes_s[32];
-	int num = 0;
-	while (curr != NULL && num < print_max_items) {
-
-		curr_data = (struct host_data*) curr->data;
-
-		if( human_readable ) {
-			readable_bytes(curr_data->bytes, bytes_s);
-		} else {
-			sprintf(bytes_s, "%lu", curr_data->bytes);
-		}
-
-		printf("%s\t%s\t%s\n", curr_data->host_a, curr_data->host_b, bytes_s);
-
-		curr = curr->next;
-		num++;
+	struct linked_item *curr_out = out;
+	while (curr_out != NULL) {
+		printf("%s", (char*)curr_out->data);
+		curr_out = curr_out->next;
 	}
 
-	printf("\n");
-	printf("Count: %i\n", linked_item_count(data));
+	pthread_mutex_unlock(&update_data_mutex);
 }
 
 
@@ -197,7 +240,7 @@ void print_data() {
 int compare(struct linked_item *a, struct linked_item *b) {
 	struct host_data *a_data = (struct host_data*) a->data;
 	struct host_data *b_data = (struct host_data*) b->data;
-	
+
 	if( b_data->bytes > a_data->bytes )
 		return 1;
 	else
@@ -221,12 +264,53 @@ void strip_port(char *address) {
 /**
  * 
  */
+void handle_request(int client_socket, struct sockaddr_in *client_address) {
+
+	if( init_response(client_socket, "text/plain", verbosity) < 0 ) {
+		return;
+	}
+
+	pthread_mutex_lock(&update_data_mutex);
+
+	struct linked_item *curr_out = out;
+	while (curr_out != NULL) {
+		send(client_socket, (char*)curr_out->data, strlen(curr_out->data), 0);
+		curr_out = curr_out->next;
+	}
+
+	pthread_mutex_unlock(&update_data_mutex);
+}
+
+/**
+ * 
+ */
+void *start_server() {
+
+	int server_socket = create_server_socket(server_ip, server_port);
+	if( server_socket < 0 ) {
+		fprintf(stderr, "Failed to create server\n");
+		exit (EX_IOERR);
+	} else {
+		accept_loop(server_socket, &handle_request);
+	}
+	return NULL;
+}
+
+
+/**
+ * 
+ */
 int main(int argc, char *argv[]) {
 
 	configure(argc, argv);
 	if (interface == NULL) {
 		fprintf(stderr, "Please select an interface (-i)\n");
 		exit (EX_USAGE);
+	}
+
+	if( server_ip != NULL ) {
+		pthread_t thread_id;
+		pthread_create(&thread_id, NULL, start_server, NULL);
 	}
 
 	char cmdString[strlen(tcpdump_command) + 32];
@@ -285,6 +369,8 @@ int main(int argc, char *argv[]) {
 									bytes);
 						}
 
+						pthread_mutex_lock(&update_data_mutex);
+
 						item = find_item(fromAddress, toAddress);
 						if (item == NULL) {
 							if( ignore_direction ) {
@@ -304,10 +390,17 @@ int main(int argc, char *argv[]) {
 						}
 
 						data = linked_item_sort(data, &compare);
-						time_t curr_time = time(NULL);
-						if( (curr_time - last_print_data) > (print_interval_seconds) ) {
-							print_data();
-							last_print_data = curr_time;
+
+						create_out();
+
+						pthread_mutex_unlock(&update_data_mutex);
+
+						if( server_ip == NULL ) {
+							time_t curr_time = time(NULL);
+							if( (curr_time - last_print_data) > (print_interval_seconds) ) {
+								print_data();
+								last_print_data = curr_time;
+							}
 						}
 
 					}

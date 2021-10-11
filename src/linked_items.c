@@ -73,6 +73,36 @@ struct linked_item* linked_item_insert_before(struct linked_item *insert, struct
 }
 
 /**
+ * Create (malloc) new linked_item, set data pointer to data, set append_to->next if append_to is not NULL
+ */
+struct linked_item* linked_item_append(struct linked_item *append_to, void *data) {
+	struct linked_item *item = malloc(sizeof(struct linked_item));
+	item->next = NULL;
+	item->data = data;
+	
+	if( append_to != NULL ) {
+		if( append_to->next == NULL ) {
+			append_to->next = item;
+		} else {
+			fprintf(stderr, "append_to->next already set");
+			return NULL;
+		}
+	}
+	
+	return item;
+}
+
+/**
+ * Create (malloc) new linked_item, set data pointer to s (malloc & strcpy), set append_to->next if append_to is not NULL
+ */
+struct linked_item* linked_item_appends(struct linked_item *append_to, char *s) {
+	char *data = malloc(strlen(s)+1);
+	strcpy(data, s);
+	
+	return linked_item_append(append_to, data);
+}
+
+/**
  * Return new start item of chain
  */
 struct linked_item* linked_item_remove(struct linked_item *remove, struct linked_item *start) {

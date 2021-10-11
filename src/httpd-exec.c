@@ -40,6 +40,7 @@
 #include <errno.h>
 
 #include "net_srv_util.c"
+#include "httpd_util.c"
 
 #define LISTEN_BACKLOG 10
 
@@ -53,20 +54,6 @@ int verbosity = 0;
 
 
 /**
- * Send data to client.
- * Return 0 on success, -1 on error
- */
-int writes(int client_socket, char *line) {
-	if( send(client_socket, line, strlen(line), 0) < 0 ) {
-		fprintf(stderr, "### Failed to send response\n");
-		fprintf(stderr, "### %s\n", strerror(errno));
-		return -1;
-	} else {
-		return 0;
-	}
-}
-
-/**
  * Handle HTTP-Request, send response (header, body)
  */
 int respond(int client_socket) {
@@ -74,32 +61,9 @@ int respond(int client_socket) {
 	char buf[1024];
 	memset(buf, 0, sizeof(buf));
 
-	//Read request headers
-	ssize_t r;
-	while( (r = read(client_socket, buf, sizeof(buf))) > 0 ) {
-		if( verbosity > 0 ) {
-			printf("%s\n", buf);
-		}
-		if( strstr(buf, "\r\n\r\n") != NULL || strstr(buf, "\n\n") != NULL )
-			break;
-		memset(buf, 0, sizeof(buf));
-	}
-
-	if( r < 0 ) {
-		fprintf(stderr, "### Failed to read request\n");
-		fprintf(stderr, "### %s\n", strerror(errno));
+	if( init_response(client_socket, content_type, verbosity) < 0 ) {
 		return -1;
 	}
-
-	if( writes(client_socket, "HTTP/1.1 200 OK\r\n") != 0 )
-		return -1;
-
-	sprintf(buf, "Content-Type: %s\r\n", content_type);
-	if( writes(client_socket, buf) != 0 )
-		return -1;
-
-	if( writes(client_socket, "Connection: close\r\n\r\n") != 0 )
-		return -1;
 
 
 	FILE *cmd = popen(command, "r");

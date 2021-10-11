@@ -44,7 +44,7 @@ gcc -Wall -o "$binDir/httpd-exec" "$sourceDir/httpd-exec.c"
 # ------------------------
 echo "Build Hostwatch"
 cd $BASE
-gcc -Wall -o "$binDir/hostwatch" "$sourceDir/hostwatch.c"
+gcc -Wall -o "$binDir/hostwatch" "$sourceDir/hostwatch.c" -lpthread
 
 # ------------------------
 echo "Build snort-scan-util"

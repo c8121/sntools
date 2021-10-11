@@ -33,7 +33,7 @@ t             | Table format output
 
 Uses `tcpdump` to monitor traffic. Counts bytes transferred between two hosts and shows a sorted table
 
-    hostwatch [-x] [-v] [-m <port>]  [-n <hosts-to-print>] [-h] -i <interface>
+    hostwatch [-x] [-v] [-m <port>]  [-n <hosts-to-print>] [-s <ip>] [-p <port>] [-h] -i <interface>
     
 Parameter     | Description
 --------------| -----------
@@ -43,6 +43,8 @@ m             | Port number: Strip ports above given number
 x             | Ignore direction of communication between two hosts
 n             | Number of hosts to be shown
 h             | Show number in human readable format
+s             | Run in server mode and bind to ip
+p             | Port to bind server to (default: 8002)
 
 ### exec-and-mail
 
