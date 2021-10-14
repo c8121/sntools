@@ -95,6 +95,7 @@ struct linked_item* create_item(char *host_a, char *host_b) {
 		last->next = item;
 	}
 
+	item->next = NULL;
 	item->data = malloc(sizeof(struct host_data));
 	struct host_data *data = (struct host_data*) item->data;
 	strcpy(data->host_a, host_a);

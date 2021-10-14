@@ -53,6 +53,8 @@ void _html_append(char *s, int max) {
 		html_last = next;
 	}
 
+	html_last->next = NULL;
+	
 	if( max < 0 ) {
 		html_last->data = malloc(strlen(s)+1);
 		strcpy(html_last->data, s);
