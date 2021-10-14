@@ -60,6 +60,7 @@ void _html_append(char *s, int max) {
 		strcpy(html_last->data, s);
 	} else {
 		html_last->data = malloc(max+1);
+		memset(html_last->data, 0, max+1);
 		strncpy(html_last->data, s, max);
 	}
 }
@@ -97,13 +98,17 @@ void html_append_text(char *text) {
 		char *p = text;
 		while (p[0] != '\0') {
 			if( p[0] == '\t' ) {
-				_html_append(s, p-s);
+				if( s < p-1 ) {
+					_html_append(s, p-s);
+				}
 				_html_append("</td><td>", -1);
 				s = p+1;
 			}
 			p++;
 		}
-		_html_append(s, -1);
+		if( s < p-1 ) {
+			_html_append(s, -1);
+		}
 
 		_html_append("</td></tr>", -1);
 	} else {

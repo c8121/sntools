@@ -32,6 +32,9 @@
 #include <errno.h>
 
 #include "linked_items.c"
+#include "net_srv_util.c"
+#include "httpd_util.c"
+#include "html_util.c"
 
 char *snort_command = "/usr/sbin/snort -d -i %s -h %s -A console -c %s";
 char *interface = NULL;
@@ -41,6 +44,10 @@ char *snort_conf = "/etc/snort/snort.conf";
 int print_max_items = 20;
 int strip_src_port = 0;
 int verbosity = 0;
+
+char *server_ip = NULL;
+int server_port = 8003;
+int server_socket = 0;
 
 struct event_data {
 	char host_src[255];
@@ -52,6 +59,9 @@ struct event_data {
 };
 
 struct linked_item *data = NULL;
+pthread_mutex_t update_data_mutex;
+
+struct linked_item *out = NULL;
 
 /**
  * 
@@ -85,6 +95,7 @@ struct linked_item* create_item(char *host_src, char *host_dst) {
 		last->next = item;
 	}
 
+	item->next = NULL;
 	item->data = malloc(sizeof(struct event_data));
 	struct event_data *data = (struct event_data*) item->data;
 	strcpy(data->host_src, host_src);
@@ -102,7 +113,7 @@ struct linked_item* create_item(char *host_src, char *host_dst) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:h:vm";
+	const char *options = "i:h:s:p:vm";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -123,11 +134,57 @@ void configure(int argc, char *argv[]) {
 			printf("Will strip port from source\n");
 			break;
 
+		case 's':
+			server_ip = optarg;
+			break;
+
+		case 'p':
+			server_port = atoi(optarg);
+			break;
+
 		case 'v':
 			verbosity++;
 			break;
 		}
 	}
+}
+
+/**
+ * 
+ */
+void create_out() {
+
+	if( out != NULL ) {
+		linked_item_free(out);
+	}
+
+	out = linked_item_appends(NULL, "SRC HOST\tDST HOST\tPROTO\n");
+	struct linked_item *curr_out = out;
+
+	struct linked_item *curr = data;
+	struct event_data *curr_data;
+	char buff[1048];
+	int num = 0;
+	while (curr != NULL && num < print_max_items) {
+
+		curr_data = (struct event_data*) curr->data;
+
+		sprintf(buff, "%s\t%s\t(%s)\n", curr_data->host_src, curr_data->host_dst, curr_data->latest_proto);
+		curr_out = linked_item_appends(curr_out, buff);
+
+		sprintf(buff, "\tHits: %i\n", curr_data->hit_count);
+		curr_out = linked_item_appends(curr_out, buff);
+
+		sprintf(buff, "\t%s\n", curr_data->latest_message);
+		curr_out = linked_item_appends(curr_out, buff);
+
+		curr = curr->next;
+		num++;
+	}
+
+	curr_out = linked_item_appends(curr_out, "\n");
+	sprintf(buff, "Count: %i\n", linked_item_count(data));
+	linked_item_appends(curr_out, buff);
 }
 
 /**
@@ -145,23 +202,15 @@ void print_data() {
 		return;
 	}
 
+	pthread_mutex_lock(&update_data_mutex);
 
-	struct linked_item *curr = data;
-	struct event_data *curr_data;
-	int num = 0;
-	while (curr != NULL && num < print_max_items) {
-
-		curr_data = (struct event_data*) curr->data;
-		printf("%s\t%s\t(%s)\n", curr_data->host_src, curr_data->host_dst, curr_data->latest_proto);
-		printf("\tHits: %i\n", curr_data->hit_count);
-		printf("\t%s\n", curr_data->latest_message);
-
-		curr = curr->next;
-		num++;
+	struct linked_item *curr_out = out;
+	while (curr_out != NULL) {
+		printf("%s", (char*)curr_out->data);
+		curr_out = curr_out->next;
 	}
 
-	printf("\n");
-	printf("Count: %i\n", linked_item_count(data));
+	pthread_mutex_unlock(&update_data_mutex);
 }
 
 /**
@@ -172,7 +221,7 @@ int compare(struct linked_item *a, struct linked_item *b) {
 	struct event_data *b_data = (struct event_data*) b->data;
 	unsigned long a_score = a_data->latest_prio * -100000 + a_data->hit_count;
 	unsigned long b_score = b_data->latest_prio * -100000 + b_data->hit_count;
-	
+
 	return b_score > a_score ? 1 : 0;
 }
 
@@ -185,6 +234,52 @@ void strip_port(char *address) {
 	if( p != NULL ) {
 		p[0] = '\0';
 	}
+}
+
+/**
+ * 
+ */
+void handle_request(int client_socket, struct sockaddr_in *client_address) {
+
+	if( init_response(client_socket, "text/html", verbosity) < 0 ) {
+		return;
+	}
+
+	char *s = "<!DOCTYPE html>\n";
+	send(client_socket, s, strlen(s), 0);
+	s = "<html><head><style>*{font-family: sans-serif;}td{padding:4px;border-bottom:1px solid black}</style></head><body>\n";
+	send(client_socket, s, strlen(s), 0);
+
+	pthread_mutex_lock(&update_data_mutex);
+
+	struct linked_item *curr_out = out;
+	while (curr_out != NULL) {
+		html_append_text((char*)curr_out->data);
+		curr_out = curr_out->next;
+	}
+	html_finish();
+
+	struct linked_item *i = html;
+	while( i != NULL ) {
+		send(client_socket, (char*)i->data, strlen(i->data), 0);
+		i = i->next;
+	}
+	linked_item_free(html);
+	html = NULL;
+
+
+	pthread_mutex_unlock(&update_data_mutex);
+
+	s = "</body></html>\n";
+	send(client_socket, s, strlen(s), 0);
+}
+
+/**
+ * 
+ */
+void *start_accept_loop() {
+	accept_loop(server_socket, &handle_request);
+	return NULL;
 }
 
 
@@ -201,6 +296,16 @@ int main(int argc, char *argv[]) {
 	if (home_network == NULL) {
 		fprintf(stderr, "Please select a home network (-h)\n");
 		exit (EX_USAGE);
+	}
+
+	if( server_ip != NULL ) {
+		server_socket = create_server_socket(server_ip, server_port);
+		if( server_socket < 0 ) {
+			fprintf(stderr, "Failed to create server\n");
+			exit (EX_IOERR);
+		}
+		pthread_t thread_id;
+		pthread_create(&thread_id, NULL, start_accept_loop, NULL);
 	}
 
 	char cmdString[strlen(snort_command) + 1024];
@@ -258,6 +363,8 @@ int main(int argc, char *argv[]) {
 			memset(message, 0, sizeof(message));
 			strncpy(message, line, p0 - line -1);
 
+			pthread_mutex_lock(&update_data_mutex);
+			
 			struct linked_item *item;
 			struct event_data *item_data;
 
@@ -273,7 +380,14 @@ int main(int argc, char *argv[]) {
 			item_data->latest_prio = prio;
 
 			data = linked_item_sort(data, &compare);
-			print_data();
+			
+			create_out();
+			
+			pthread_mutex_unlock(&update_data_mutex);
+			
+			if( server_ip == NULL ) {
+				print_data();
+			}
 		}
 	}
 
