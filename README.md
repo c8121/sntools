@@ -46,6 +46,10 @@ h             | Show number in human readable format
 s             | Run in server mode and bind to ip
 p             | Port to bind server to (default: 8002)
 
+Example watching connections and provide data via HTTP:
+
+    ./bin/hostwatch -s 0.0.0.0 -x -i enx6
+
 ### exec-and-mail
 
 Execute a command and send ouput via smtp after given number of lines or after timeout
