@@ -72,6 +72,10 @@ c             | Response content-type (default is "text/plain")
 p             | Port to bind to (default is 8001)
 v             | Enable verbose mode
 
+Example: Provide arp-history via HTTP:
+
+    ./bin/httpd-exec -c "text/html" "./bin/arp-history -t | ./bin/html"
+
 ### snort-scan-util
 
 Uses `snort` to monitor networks. 
