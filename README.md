@@ -90,7 +90,7 @@ Parameter     | Description
 --------------| -----------
 i             | Interface name
 h             | Home network
-s             | Strip port
+m             | Strip port from source host
 v             | Enable verbose mode
 
 

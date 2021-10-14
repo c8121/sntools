@@ -102,7 +102,7 @@ struct linked_item* create_item(char *host_src, char *host_dst) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:h:vs";
+	const char *options = "i:h:vm";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -118,7 +118,7 @@ void configure(int argc, char *argv[]) {
 			printf("Home network: %s\n", home_network);
 			break;
 
-		case 's':
+		case 'm':
 			strip_src_port = 1;
 			printf("Will strip port from source\n");
 			break;
