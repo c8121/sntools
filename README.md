@@ -99,10 +99,14 @@ Send all known MACs with IPs via e-mail. Uses `arp-history` to read data from lo
 
 ## Requirements
 
-`arp-scan` (https://github.com/royhills/arp-scan),
+* `arp-scan` (https://github.com/royhills/arp-scan),  
 available on Debian/Ubuntu via `apt install arp-scan`
 
-Bash scripts are using `swaks` (https://github.com/jetmore/swaks) for sending e-mails,
+* Bash scripts are using `swaks` (https://github.com/jetmore/swaks) for sending e-mails,  
 available on Debian/Ubuntu via `apt install swaks`
 
-`tcpdump` should be available wothput installation on Debian/Ubuntu
+* `tcpdump` (https://www.tcpdump.org/) should be available without installation on Debian/Ubuntu  
+
+* The IDS `snort` (https://www.snort.org/) is used to monitor network traffic,  
+available on Debian/Ubuntu via `apt install snort`
+
