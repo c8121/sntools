@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include "linked_items.c"
 #include "html_util.c"
 
 #define LINE_BUF_SIZE 512
@@ -57,6 +58,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	linked_item_free(html);
+	html = NULL;
 
 	printf("</body></html>");
 }

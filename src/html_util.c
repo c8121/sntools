@@ -21,8 +21,6 @@
  * Very simple util to convert text to html
  */
 
-#include "linked_items.c"
-
 struct linked_item *html = NULL;
 struct linked_item *html_last = NULL;
 
@@ -125,6 +123,7 @@ void html_append_text(char *text) {
 void html_finish() {
 	_html_finish_block();
 	html_last = NULL;
+	html_curr_paragraph_type = UNDEFINED;
 }
 
 

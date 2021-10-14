@@ -34,6 +34,7 @@
 #include "linked_items.c"
 #include "net_srv_util.c"
 #include "httpd_util.c"
+#include "html_util.c"
 
 char *tcpdump_command = "tcpdump -ni %s";
 char *interface = NULL;
@@ -176,7 +177,7 @@ void create_out() {
 		linked_item_free(out);
 	}
 
-	out = linked_item_appends(NULL, "---====A====---\t---====B====---\t---====bytes====---\n");
+	out = linked_item_appends(NULL, "HOST A\tHOST B\tDATA\n");
 	struct linked_item *curr_out = out;
 
 	struct linked_item *curr = data;
@@ -266,19 +267,37 @@ void strip_port(char *address) {
  */
 void handle_request(int client_socket, struct sockaddr_in *client_address) {
 
-	if( init_response(client_socket, "text/plain", verbosity) < 0 ) {
+	if( init_response(client_socket, "text/html", verbosity) < 0 ) {
 		return;
 	}
 
+	char *s = "<!DOCTYPE html>\n";
+	send(client_socket, s, strlen(s), 0);
+	s = "<html><head><style>*{font-family: sans-serif;}td{padding:4px;border-bottom:1px solid black}</style></head><body>\n";
+	send(client_socket, s, strlen(s), 0);
+	
 	pthread_mutex_lock(&update_data_mutex);
 
 	struct linked_item *curr_out = out;
 	while (curr_out != NULL) {
-		send(client_socket, (char*)curr_out->data, strlen(curr_out->data), 0);
+		html_append_text((char*)curr_out->data);
 		curr_out = curr_out->next;
 	}
+	html_finish();
+
+	struct linked_item *i = html;
+	while( i != NULL ) {
+		send(client_socket, (char*)i->data, strlen(i->data), 0);
+		i = i->next;
+	}
+	linked_item_free(html);
+	html = NULL;
+
 
 	pthread_mutex_unlock(&update_data_mutex);
+	
+	s = "</body></html>\n";
+	send(client_socket, s, strlen(s), 0);
 }
 
 /**
