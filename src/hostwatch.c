@@ -50,6 +50,7 @@ time_t last_print_data = 0;
 
 char *server_ip = NULL;
 int server_port = 8002;
+int server_socket = 0;
 
 
 struct host_data {
@@ -276,7 +277,7 @@ void handle_request(int client_socket, struct sockaddr_in *client_address) {
 	send(client_socket, s, strlen(s), 0);
 	s = "<html><head><style>*{font-family: sans-serif;}td{padding:4px;border-bottom:1px solid black}</style></head><body>\n";
 	send(client_socket, s, strlen(s), 0);
-	
+
 	pthread_mutex_lock(&update_data_mutex);
 
 	struct linked_item *curr_out = out;
@@ -296,7 +297,7 @@ void handle_request(int client_socket, struct sockaddr_in *client_address) {
 
 
 	pthread_mutex_unlock(&update_data_mutex);
-	
+
 	s = "</body></html>\n";
 	send(client_socket, s, strlen(s), 0);
 }
@@ -304,15 +305,8 @@ void handle_request(int client_socket, struct sockaddr_in *client_address) {
 /**
  * 
  */
-void *start_server() {
-
-	int server_socket = create_server_socket(server_ip, server_port);
-	if( server_socket < 0 ) {
-		fprintf(stderr, "Failed to create server\n");
-		exit (EX_IOERR);
-	} else {
-		accept_loop(server_socket, &handle_request);
-	}
+void *start_accept_loop() {
+	accept_loop(server_socket, &handle_request);
 	return NULL;
 }
 
@@ -329,8 +323,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	if( server_ip != NULL ) {
+		server_socket = create_server_socket(server_ip, server_port);
+		if( server_socket < 0 ) {
+			fprintf(stderr, "Failed to create server\n");
+			exit (EX_IOERR);
+		}
 		pthread_t thread_id;
-		pthread_create(&thread_id, NULL, start_server, NULL);
+		pthread_create(&thread_id, NULL, start_accept_loop, NULL);
 	}
 
 	char cmdString[strlen(tcpdump_command) + 32];
