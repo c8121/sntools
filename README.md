@@ -1,6 +1,6 @@
 # sntools
 
-Some network tools for monitoring and providing machine information via e-mail or http.
+Some network tools for monitoring networks and providing machine information via shell, e-mail or http.
 
 
 ## Tools
@@ -71,6 +71,20 @@ Parameter     | Description
 c             | Response content-type (default is "text/plain")
 p             | Port to bind to (default is 8001)
 v             | Enable verbose mode
+
+### snort-scan-util
+
+Uses `snort` to monitor networks. 
+
+    snort-scan-util [-s] [-v] -h <home network> -i <interface>
+    
+Parameter     | Description
+--------------| -----------
+i             | Interface name
+h             | Home network
+s             | Strip port
+v             | Enable verbose mode
+
 
 ## Bash scripts
 
