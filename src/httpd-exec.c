@@ -39,8 +39,9 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "net_srv_util.c"
-#include "httpd_util.c"
+#include "lib/net_srv_util.c"
+#include "lib/net_util.c"
+#include "lib/httpd_util.c"
 
 #define LISTEN_BACKLOG 10
 

@@ -17,7 +17,6 @@
  * Author: christian c8121 de
  */
 
-#include "net_util.c"
 
 /**
  * Read request headers (ignore them), send response header (HTTP1.1, Connection-Close)

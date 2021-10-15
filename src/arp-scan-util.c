@@ -28,8 +28,8 @@
 #include <netdb.h>
 #include <time.h>
 
-#include "mdb.c"
-#include "net_util.c"
+#include "lib/mdb.c"
+#include "lib/net_util.c"
 
 char *arpScanCommand = "/usr/sbin/arp-scan --interface=%s --localnet -x";
 char *interface = NULL;

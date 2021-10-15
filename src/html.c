@@ -30,8 +30,8 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#include "linked_items.c"
-#include "html_util.c"
+#include "lib/linked_items.c"
+#include "lib/html_convert.c"
 
 #define LINE_BUF_SIZE 512
 

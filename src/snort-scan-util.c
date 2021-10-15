@@ -31,10 +31,11 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "linked_items.c"
-#include "net_srv_util.c"
-#include "httpd_util.c"
-#include "html_util.c"
+#include "lib/linked_items.c"
+#include "lib/net_util.c"
+#include "lib/net_srv_util.c"
+#include "lib/httpd_util.c"
+#include "lib/html_convert.c"
 
 char *snort_command = "/usr/sbin/snort -d -i %s -h %s -A console -c %s";
 char *interface = NULL;

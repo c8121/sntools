@@ -30,9 +30,9 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "net_util.c"
-#include "smtp_socket_util.c"
-#include "linked_items.c"
+#include "lib/net_util.c"
+#include "lib/smtp_socket_util.c"
+#include "lib/linked_items.c"
 
 char *command;
 char *smtpHost;

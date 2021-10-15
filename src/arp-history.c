@@ -25,7 +25,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#include "mdb.c"
+#include "lib/mdb.c"
 
 
 char *query = NULL;

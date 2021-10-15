@@ -49,4 +49,4 @@ gcc -Wall -o "$binDir/hostwatch" "$sourceDir/hostwatch.c" -lpthread
 # ------------------------
 echo "Build snort-scan-util"
 cd $BASE
-gcc -Wall -o "$binDir/snort-scan-util" "$sourceDir/snort-scan-util.c" -lpthread
+gcc -g -Wall -o "$binDir/snort-scan-util" "$sourceDir/snort-scan-util.c" -lpthread
