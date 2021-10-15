@@ -36,6 +36,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "lib/linked_items.c"
 #include "lib/net_util.c"
@@ -289,6 +290,12 @@ void *start_accept_loop() {
 	return NULL;
 }
 
+/**
+ * 
+ */
+void sig_handler(int signum) {
+	printf("Caught signal %d\n", signum);
+}
 
 /**
  * 
@@ -314,6 +321,9 @@ int main(int argc, char *argv[]) {
 		pthread_t thread_id;
 		pthread_create(&thread_id, NULL, start_accept_loop, NULL);
 	}
+	
+	signal(SIGPIPE, &sig_handler);
+	
 
 	char cmdString[strlen(snort_command) + 1024];
 	sprintf(cmdString, snort_command, interface, home_network, snort_conf);

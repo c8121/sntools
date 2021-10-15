@@ -40,6 +40,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "lib/net_srv_util.c"
 #include "lib/net_util.c"
@@ -142,6 +143,12 @@ void usage_message() {
 	printf("Usage: httpd-exec [-c content-type] [-p port] \"<command>\"\n");
 }
 
+/**
+ * 
+ */
+void sig_handler(int signum) {
+	printf("Caught signal %d\n", signum);
+}
 
 /**
  * 
@@ -166,6 +173,8 @@ int main(int argc, char *argv[]) {
 
 	printf("WARNING: The command '%s' will be executed every time a client connects and the output will sent directly to the client!\n", command);
 	printf("WARNING: USE AT OWN RISK!\n");
+	
+	signal(SIGPIPE, &sig_handler);
 
 	int server_socket = create_server_socket(ip, port);
 	if( server_socket < 0 ) {
