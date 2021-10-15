@@ -45,6 +45,7 @@ n             | Number of hosts to be shown
 h             | Show number in human readable format
 s             | Run in server mode and bind to ip
 p             | Port to bind server to (default: 8002)
+t             | Timespan in seconds to be observed (default: 3600)
 
 Example watching connections and provide data via HTTP:
 

@@ -51,6 +51,7 @@ int print_max_items = 20;
 int ignore_direction = 0;
 int strip_port_above = 1024;
 int human_readable = 0;
+int timespan_seconds = 3600;
 
 int print_interval_seconds = 3;
 time_t last_print_data = 0;
@@ -59,11 +60,15 @@ char *server_ip = NULL;
 int server_port = 8002;
 int server_socket = 0;
 
+struct byte_count {
+	time_t ts;
+	unsigned long bytes;
+};
 
 struct host_data {
 	char host_a[255];
 	char host_b[255];
-	unsigned long bytes;
+	struct linked_item *byte_count;
 };
 
 struct linked_item *data = NULL;
@@ -93,27 +98,101 @@ struct linked_item* find_item(char *host_a, char *host_b) {
  * 
  */
 struct linked_item* create_item(char *host_a, char *host_b) {
-	
+
 	struct linked_item *item = linked_item_create(linked_item_last(data));
 	if( data == NULL ) {
 		data = item;
 	}
-	
+
 	item->data = malloc(sizeof(struct host_data));
 	struct host_data *data = (struct host_data*) item->data;
 	strcpy(data->host_a, host_a);
 	strcpy(data->host_b, host_b);
-	data->bytes = 0;
+
+	data->byte_count = NULL;
 
 	return item;
 }
+
+/**
+ * 
+ */
+void count_bytes(struct linked_item *item, unsigned long b, time_t ts) {
+
+	struct host_data *data = (struct host_data*) item->data;
+
+	struct linked_item *byte_count;
+	if( data->byte_count == NULL ) {
+		data->byte_count = linked_item_create(NULL);
+		byte_count = data->byte_count;
+	} else {
+		byte_count = linked_item_create(linked_item_last(data->byte_count));
+	}
+	byte_count->data = malloc(sizeof(struct byte_count));
+
+	struct byte_count *byte_count_data = byte_count->data;
+	byte_count_data->bytes = b;
+	byte_count_data->ts = ts;
+}
+
+/**
+ * 
+ */
+unsigned long sum_bytes(struct linked_item *item) {
+
+	struct host_data *data = (struct host_data*) item->data;
+	if( data->byte_count == NULL ) {
+		return 0;
+	}
+
+	unsigned long sum = 0;
+	struct linked_item *curr = data->byte_count;
+	struct byte_count *byte_count;
+	while( curr != NULL ) {
+		byte_count = curr->data;
+		sum += byte_count->bytes;
+		curr = curr->next;
+	}
+
+	return sum;
+}
+
+/**
+ * 
+ */
+void remove_byte_count_before(time_t before) {
+
+	struct linked_item *item = data;
+	while (item != NULL) {
+
+		struct host_data *data = item->data;
+		struct linked_item *byte_count = data->byte_count;
+		while( byte_count != NULL && byte_count->data != NULL ) {
+
+			struct byte_count *byte_count_data = byte_count->data;
+			if( byte_count_data->ts < before ) {
+				struct linked_item *tmp = linked_item_remove(byte_count, byte_count);
+				if( data->byte_count == byte_count ) {
+					data->byte_count = tmp;
+				}
+				free(byte_count);
+				byte_count = tmp;
+			} else {
+				byte_count = byte_count->next;
+			}
+		}
+
+		item = item->next;
+	}
+}
+
 
 /**
  * Read command line arguments and configure application
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:m:n:s:p:vxh";
+	const char *options = "i:m:n:s:p:t:vxh";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -150,6 +229,12 @@ void configure(int argc, char *argv[]) {
 			server_port = atoi(optarg);
 			break;
 
+		case 't':
+			timespan_seconds = atoi(optarg);
+			printf("Will keep data %i seconds\n", timespan_seconds);
+			break;
+
+
 		case 'v':
 			verbosity++;
 			break;
@@ -181,12 +266,17 @@ void create_out() {
 		linked_item_free(out);
 	}
 
-	out = linked_item_appends(NULL, "HOST A\tHOST B\tDATA\n");
+	char buff[1024];
+	
+	sprintf(buff, "Hostwatch, timespan=%i sec\n", timespan_seconds);
+	out = linked_item_appends(NULL, buff);
+	
 	struct linked_item *curr_out = out;
+	curr_out = linked_item_appends(curr_out, "\n");
+	curr_out = linked_item_appends(curr_out, "HOST A\tHOST B\tBYTES (Packet count)\n");
 
 	struct linked_item *curr = data;
 	struct host_data *curr_data;
-	char buff[1024];
 	char bytes_s[32];
 	int num = 0;
 	while (curr != NULL && num < print_max_items) {
@@ -194,12 +284,12 @@ void create_out() {
 		curr_data = (struct host_data*) curr->data;
 
 		if( human_readable ) {
-			readable_bytes(curr_data->bytes, bytes_s);
+			readable_bytes(sum_bytes(curr), bytes_s);
 		} else {
-			sprintf(bytes_s, "%lu", curr_data->bytes);
+			sprintf(bytes_s, "%lu", sum_bytes(curr));
 		}
 
-		sprintf(buff, "%s\t%s\t%s\n", curr_data->host_a, curr_data->host_b, bytes_s);
+		sprintf(buff, "%s\t%s\t%s (%i)\n", curr_data->host_a, curr_data->host_b, bytes_s, linked_item_count(curr_data->byte_count));
 		curr_out = linked_item_appends(curr_out, buff);
 
 
@@ -243,10 +333,8 @@ void print_data() {
  * comparison of bytes, used by linked_item_sort
  */
 int compare(struct linked_item *a, struct linked_item *b) {
-	struct host_data *a_data = (struct host_data*) a->data;
-	struct host_data *b_data = (struct host_data*) b->data;
 
-	if( b_data->bytes > a_data->bytes )
+	if( sum_bytes(b) > sum_bytes(a) )
 		return 1;
 	else
 		return 0;
@@ -347,7 +435,7 @@ int main(int argc, char *argv[]) {
 		pthread_t thread_id;
 		pthread_create(&thread_id, NULL, start_accept_loop, NULL);
 	}
-	
+
 	signal(SIGPIPE, &sig_handler);
 
 	char cmdString[strlen(tcpdump_command) + 32];
@@ -375,7 +463,8 @@ int main(int argc, char *argv[]) {
 		char fromAddress[64];
 		char toAddress[64];
 		struct linked_item *item;
-		struct host_data *item_data;
+
+		time_t now = time(NULL);
 
 		char *p1 = strstr(line, " > ");
 		if (p1 != NULL) {
@@ -419,11 +508,11 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
-						item_data = (struct host_data*) item->data;
-						item_data->bytes += bytes;
+						remove_byte_count_before(now - timespan_seconds);
+						count_bytes(item, bytes, now);
 						if (verbosity > 0) {
-							printf("Update: %s -> %s: %lub\n", item_data->host_a,
-									item_data->host_b, item_data->bytes);
+							printf("Update: %s -> %s\n", ((struct host_data*)item->data)->host_a,
+									((struct host_data*)item->data)->host_b);
 						}
 
 						data = linked_item_sort(data, &compare);
@@ -433,10 +522,9 @@ int main(int argc, char *argv[]) {
 						pthread_mutex_unlock(&update_data_mutex);
 
 						if( server_ip == NULL ) {
-							time_t curr_time = time(NULL);
-							if( (curr_time - last_print_data) > (print_interval_seconds) ) {
+							if( (now - last_print_data) > (print_interval_seconds) ) {
 								print_data();
-								last_print_data = curr_time;
+								last_print_data = now;
 							}
 						}
 
