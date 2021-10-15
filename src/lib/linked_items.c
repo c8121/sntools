@@ -24,6 +24,24 @@ struct linked_item {
 };
 
 /**
+ * Create a new linked item, set prev->next if prev is not null
+ */
+struct linked_item* linked_item_create(struct linked_item *prev) {
+	
+	struct linked_item *item = malloc(sizeof(struct linked_item));
+	item->next = NULL;
+	
+	if( prev != NULL ) {
+		if( prev->next != NULL ) {
+			fprintf(stderr, "WARN: prev->next is not NULL");
+		}
+		prev->next = item;
+	}
+		
+	return item;
+}
+
+/**
  * Count all items beginning as given start (including start)
  */
 int linked_item_count(struct linked_item *start) {
@@ -79,7 +97,7 @@ struct linked_item* linked_item_append(struct linked_item *append_to, void *data
 	struct linked_item *item = malloc(sizeof(struct linked_item));
 	item->next = NULL;
 	item->data = data;
-	
+
 	if( append_to != NULL ) {
 		if( append_to->next == NULL ) {
 			append_to->next = item;
@@ -88,7 +106,7 @@ struct linked_item* linked_item_append(struct linked_item *append_to, void *data
 			return NULL;
 		}
 	}
-	
+
 	return item;
 }
 
@@ -98,7 +116,7 @@ struct linked_item* linked_item_append(struct linked_item *append_to, void *data
 struct linked_item* linked_item_appends(struct linked_item *append_to, char *s) {
 	char *data = malloc(strlen(s)+1);
 	strcpy(data, s);
-	
+
 	return linked_item_append(append_to, data);
 }
 
@@ -164,9 +182,9 @@ struct linked_item* linked_item_sort(struct linked_item *start, int (*compare_fu
 		while( curr != NULL ) {
 
 			if( last != NULL ) {
-				
+
 				int comp = (*compare_function)(last, curr);
-				
+
 				if( comp > 0 ) {
 					start = linked_item_remove(curr, start);
 					start = linked_item_insert_before(curr, last, start);
@@ -180,6 +198,6 @@ struct linked_item* linked_item_sort(struct linked_item *start, int (*compare_fu
 		}
 
 	} while( changed > 0 );
-	
+
 	return start;
 }

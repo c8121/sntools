@@ -93,17 +93,12 @@ struct linked_item* find_item(char *host_a, char *host_b) {
  * 
  */
 struct linked_item* create_item(char *host_a, char *host_b) {
-	struct linked_item *item;
-	if (data == NULL) {
-		data = malloc(sizeof(struct linked_item));
-		item = data;
-	} else {
-		struct linked_item *last = linked_item_last(data);
-		item = malloc(sizeof(struct linked_item));
-		last->next = item;
+	
+	struct linked_item *item = linked_item_create(linked_item_last(data));
+	if( data == NULL ) {
+		data = item;
 	}
-
-	item->next = NULL;
+	
 	item->data = malloc(sizeof(struct host_data));
 	struct host_data *data = (struct host_data*) item->data;
 	strcpy(data->host_a, host_a);

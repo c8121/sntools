@@ -93,17 +93,12 @@ struct linked_item* find_item(char *host_src, char *host_dst) {
  * 
  */
 struct linked_item* create_item(char *host_src, char *host_dst) {
-	struct linked_item *item;
-	if (data == NULL) {
-		data = malloc(sizeof(struct linked_item));
-		item = data;
-	} else {
-		struct linked_item *last = linked_item_last(data);
-		item = malloc(sizeof(struct linked_item));
-		last->next = item;
+
+	struct linked_item *item = linked_item_create(linked_item_last(data));
+	if( data == NULL ) {
+		data = item;
 	}
 
-	item->next = NULL;
 	item->data = malloc(sizeof(struct event_data));
 	struct event_data *data = (struct event_data*) item->data;
 	strcpy(data->host_src, host_src);
@@ -321,9 +316,9 @@ int main(int argc, char *argv[]) {
 		pthread_t thread_id;
 		pthread_create(&thread_id, NULL, start_accept_loop, NULL);
 	}
-	
+
 	signal(SIGPIPE, &sig_handler);
-	
+
 
 	char cmdString[strlen(snort_command) + 1024];
 	sprintf(cmdString, snort_command, interface, home_network, snort_conf);
@@ -381,7 +376,7 @@ int main(int argc, char *argv[]) {
 			strncpy(message, line, p0 - line -1);
 
 			pthread_mutex_lock(&update_data_mutex);
-			
+
 			struct linked_item *item;
 			struct event_data *item_data;
 
@@ -397,11 +392,11 @@ int main(int argc, char *argv[]) {
 			item_data->latest_prio = prio;
 
 			data = linked_item_sort(data, &compare);
-			
+
 			create_out();
-			
+
 			pthread_mutex_unlock(&update_data_mutex);
-			
+
 			if( server_ip == NULL ) {
 				print_data();
 			}

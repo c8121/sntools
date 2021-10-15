@@ -45,15 +45,11 @@ void _html_append(char *s, int max) {
 	}
 
 	if( html == NULL ) {
-		html = malloc(sizeof(struct linked_item));
+		html = linked_item_create(NULL);
 		html_last = html;
 	} else {
-		struct linked_item *next = malloc(sizeof(struct linked_item));
-		html_last->next = next;
-		html_last = next;
+		html_last = linked_item_create(html_last);
 	}
-
-	html_last->next = NULL;
 	
 	if( max < 0 ) {
 		html_last->data = malloc(strlen(s)+1);

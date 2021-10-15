@@ -297,11 +297,10 @@ int main(int argc, char *argv[]) {
 		pthread_mutex_lock(&handle_data_mutex);
 
 		if( buffer == NULL ) {
-			buffer = malloc(sizeof(struct linked_item));
+			buffer = linked_item_create(NULL);
 			readInto = buffer;
 		} else {
-			readInto->next = malloc(sizeof(struct linked_item));
-			readInto = readInto->next;
+			readInto = linked_item_create(readInto);
 		}
 
 		readInto->next = NULL;
