@@ -295,15 +295,24 @@ void sig_handler(int signum) {
 /**
  * 
  */
+void usage_message() {
+	printf("Usage: snort-scan-util [-s] [-v] -h <home network> -i <interface>\n");
+}
+
+/**
+ * 
+ */
 int main(int argc, char *argv[]) {
 
 	configure(argc, argv);
 	if (interface == NULL) {
 		fprintf(stderr, "Please select an interface (-i)\n");
+		usage_message();
 		exit (EX_USAGE);
 	}
 	if (home_network == NULL) {
 		fprintf(stderr, "Please select a home network (-h)\n");
+		usage_message();
 		exit (EX_USAGE);
 	}
 

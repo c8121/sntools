@@ -322,11 +322,19 @@ void sig_handler(int signum) {
 /**
  * 
  */
+void usage_message() {
+	printf("Usage: hostwatch [-x] [-v] [-m <port>]  [-n <hosts-to-print>] [-s <ip>] [-p <port>] [-h] -i <interface>\n");
+}
+
+/**
+ * 
+ */
 int main(int argc, char *argv[]) {
 
 	configure(argc, argv);
 	if (interface == NULL) {
 		fprintf(stderr, "Please select an interface (-i)\n");
+		usage_message();
 		exit (EX_USAGE);
 	}
 

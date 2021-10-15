@@ -70,6 +70,13 @@ void configure(int argc, char *argv[]) {
 }
 
 /**
+ * 
+ */
+void usage_message() {
+	printf("Usage: arp-scan-util -i <interface> [-d <lmdb-directory>] [-v]\n");
+}
+
+/**
  *
  */
 int main(int argc, char *argv[]) {
@@ -77,6 +84,7 @@ int main(int argc, char *argv[]) {
 	configure(argc, argv);
 	if( interface == NULL ) {
 		fprintf(stderr, "Please select an interface (-i)\n");
+		usage_message();
 		exit(EX_USAGE);
 	}
 
