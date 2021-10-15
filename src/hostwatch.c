@@ -267,10 +267,11 @@ void create_out() {
 	}
 
 	char buff[1024];
-	
-	sprintf(buff, "Hostwatch, timespan=%i sec\n", timespan_seconds);
+
+	time_t now = time(NULL);
+	sprintf(buff, "Hostwatch: timespan=%i sec, current time=%s\n", timespan_seconds, asctime(localtime(&now)));
 	out = linked_item_appends(NULL, buff);
-	
+
 	struct linked_item *curr_out = out;
 	curr_out = linked_item_appends(curr_out, "\n");
 	curr_out = linked_item_appends(curr_out, "HOST A\tHOST B\tBYTES (Packet count)\n");
