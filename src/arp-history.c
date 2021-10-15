@@ -67,7 +67,7 @@ void configure(int argc, char *argv[]) {
 /**
  * Print out all lmdb entries
  */
-void printAllData() {
+void print_all_data() {
 
 	MDB_cursor *cursor;
 	if( mdb_cursor_open(mdbTxn, mdbDbi, &cursor) != MDB_SUCCESS ) {
@@ -85,7 +85,7 @@ void printAllData() {
 /**
  * Print out tab separated table
  */
-void printTable() {
+void print_table() {
 
 	MDB_cursor *cursor;
 	if( mdb_cursor_open(mdbTxn, mdbDbi, &cursor) != MDB_SUCCESS ) {
@@ -167,12 +167,12 @@ int main(int argc, char *argv[]) {
 	} else if ( outputFormat == 't' ) {
 
 		printf("arp history:\n\n");
-		printTable();
+		print_table();
 
 	} else {
 
 		printf("arp database:\n\n");
-		printAllData();
+		print_all_data();
 
 	}
 
