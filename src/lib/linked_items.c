@@ -27,17 +27,17 @@ struct linked_item {
  * Create a new linked item, set prev->next if prev is not null
  */
 struct linked_item* linked_item_create(struct linked_item *prev) {
-	
+
 	struct linked_item *item = malloc(sizeof(struct linked_item));
 	item->next = NULL;
-	
+
 	if( prev != NULL ) {
 		if( prev->next != NULL ) {
-			fprintf(stderr, "WARN: prev->next is not NULL");
+			fprintf(stderr, "WARN: prev->next is not NULL\n");
 		}
 		prev->next = item;
 	}
-		
+
 	return item;
 }
 
@@ -161,6 +161,7 @@ void linked_item_free(struct linked_item *start) {
 	free(start);
 }
 
+
 /**
  * Return new start item of chain
  */
@@ -186,18 +187,21 @@ struct linked_item* linked_item_sort(struct linked_item *start, int (*compare_fu
 				int comp = (*compare_function)(last, curr);
 
 				if( comp > 0 ) {
-					start = linked_item_remove(curr, start);
+					if( last == start ) {
+						start = linked_item_remove(curr, start);
+					} else {
+						linked_item_remove(curr, last);
+					}
 					start = linked_item_insert_before(curr, last, start);
-					changed++;
+					changed++;	
 				}
 			}
-			if( curr != NULL ) {
-				last = curr;
-				curr = curr->next;
-			}
+			last = curr;
+			curr = curr->next;
 		}
 
 	} while( changed > 0 );
 
 	return start;
 }
+
