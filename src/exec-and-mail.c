@@ -13,7 +13,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
+/*
+ * Launches a given command and reads output.
+ * Creates and sends a e-mail countaing command output
+ * after reading a given number of lines or after a given timeout
+ */
+
+/*
  * Author: christian c8121 de
  */
 

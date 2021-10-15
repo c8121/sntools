@@ -13,7 +13,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
+/*
+ * This program starts tcpdump an reads output.
+ * Creates a sorted list of hosts and summary of trasferred bytes 
+ */
+
+/*
  * Author: christian c8121 de
  */
 

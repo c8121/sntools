@@ -14,12 +14,12 @@
  */
 
 /*
- * Author: christian c8121 de
+ * Tiny and very simple text to html converter.
+ * Suitable for output of sntools only
  */
 
 /*
- * Tiny and very simple text to html converter.
- * Suitable for output of sntools only
+ * Author: christian c8121 de
  */
 
 #include <stdio.h>
@@ -37,8 +37,7 @@
 
 
 /**
- * Tiny and very simple text to html converter.
- * Suitable for output of sntools only
+ * 
  */
 int main(int argc, char *argv[]) {
 	

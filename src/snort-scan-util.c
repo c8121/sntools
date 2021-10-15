@@ -13,9 +13,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
+/*
+ * This program starts snort an reads output.
+ * Creates a sorted list of hosts and related alerts
+ */
+
+/*
  * Author: christian c8121 de
  */
+
 
 #include <stdio.h>
 #include <stdlib.h>

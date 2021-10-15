@@ -13,15 +13,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
+/*
  * This a...
  * - very simple HTTP server.
  * - very ineffective server (handles one client after another)
- * - very dangerous server (executes a given command and sends its output everytime a client connects)  
+ * - very dangerous server (executes a given command and sends its output everytime a client connects)
+ * 
+ * Waits for connections and executes a given command once for each client  
  */
 
 
-/**
+/*
  * Author: christian c8121 de
  */
 
@@ -142,7 +144,7 @@ void usage_message() {
 
 
 /**
- * Start server, wait for connections and execute command once for each client
+ * 
  */
 int main(int argc, char *argv[]) {
 

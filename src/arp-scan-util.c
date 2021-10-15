@@ -13,7 +13,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
+/*
+ * Launches arp-scan, reads IP and MAC, resolves hostnames
+ */
+
+/*
  * Author: christian c8121 de
  */
 
@@ -66,11 +70,7 @@ void configure(int argc, char *argv[]) {
 }
 
 /**
- * Launches arp-scan, reads IP and MAC, resolves hostnames
- * CLI Arguments:
- *   -i <interface name>
- *   -d <mdb directory> (optional)
- *   -v (verbose output, optinoal)
+ *
  */
 int main(int argc, char *argv[]) {
 
