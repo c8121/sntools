@@ -19,32 +19,49 @@
 
 
 struct linked_item {
-	void *data;
+	struct linked_item *prev;
 	struct linked_item *next;
 };
 
 /**
- * Create a new linked item, set prev->next if prev is not null
+ * Create a new linked item, instert after prev, set prev & next
  */
-struct linked_item* linked_item_create(struct linked_item *prev) {
+void __linked_item_append(struct linked_item *prev, struct linked_item *item) {
 
-	struct linked_item *item = malloc(sizeof(struct linked_item));
+	item->prev = NULL;
 	item->next = NULL;
 
 	if( prev != NULL ) {
 		if( prev->next != NULL ) {
-			fprintf(stderr, "WARN: prev->next is not NULL\n");
+			item->next = prev->next;
+			prev->next->prev = item;
 		}
 		prev->next = item;
+		item->prev = prev;
 	}
+}
+
+void linked_item_append(void *prev, void *item) {
+	__linked_item_append(prev, item);
+}
+
+/**
+ * Create a new linked item, instert after prev, set prev & next
+ */
+void* linked_item_create(void *prev, size_t size) {
+
+	struct linked_item *item = malloc(size);
+	linked_item_append(prev, item);
 
 	return item;
 }
 
+
+
 /**
  * Count all items beginning as given start (including start)
  */
-int linked_item_count(struct linked_item *start) {
+int __linked_item_count(struct linked_item *start) {
 	int c = 0;
 	struct linked_item *curr = start;
 	while( curr != NULL ) {
@@ -54,10 +71,14 @@ int linked_item_count(struct linked_item *start) {
 	return c;
 }
 
+int linked_item_count(void *start) {
+	return __linked_item_count(start);
+}
+
 /**
  * Get last item from chain, starting at given point.
  */
-struct linked_item* linked_item_last(struct linked_item *start) {
+void* __linked_item_last(struct linked_item *start) {
 	struct linked_item *curr = start;
 	while( curr != NULL ) {
 		if( curr->next == NULL ) {
@@ -68,104 +89,62 @@ struct linked_item* linked_item_last(struct linked_item *start) {
 	return NULL;
 }
 
-/**
- * Return new start item of chain
- */
-struct linked_item* linked_item_insert_before(struct linked_item *insert, struct linked_item *before, struct linked_item *start) {
-	struct linked_item *last = NULL;
-	struct linked_item *curr = start;
-	while( curr != NULL ) {
-		if( curr == before ) {
-			insert->next = before;
-			if( last != NULL ) {
-				last->next = insert;
-				return start;
-			} else {
-				return insert;
-			}
-		}
-		last = curr;
-		curr = curr->next;
-	}
-	return start;
+void* linked_item_last(void *start) {
+	return __linked_item_last(start);
 }
 
 /**
- * Create (malloc) new linked_item, set data pointer to data, set append_to->next if append_to is not NULL
+ * 
  */
-struct linked_item* linked_item_append(struct linked_item *append_to, void *data) {
-	struct linked_item *item = malloc(sizeof(struct linked_item));
-	item->next = NULL;
-	item->data = data;
-
-	if( append_to != NULL ) {
-		if( append_to->next == NULL ) {
-			append_to->next = item;
+void __linked_item_remove(struct linked_item *remove) {
+	if( remove->prev != NULL ) {
+		if( remove->next != NULL ) {
+			remove->prev->next = remove->next;
+			remove->next->prev = remove->prev;
 		} else {
-			fprintf(stderr, "append_to->next already set");
-			return NULL;
+			remove->prev->next = NULL;
 		}
+	} else if( remove->next != NULL ) {
+		remove->next->prev = NULL;
 	}
-
-	return item;
 }
 
 /**
- * Create (malloc) new linked_item, set data pointer to s (malloc & strcpy), set append_to->next if append_to is not NULL
+ * 
  */
-struct linked_item* linked_item_appends(struct linked_item *append_to, char *s) {
-	char *data = malloc(strlen(s)+1);
-	strcpy(data, s);
-
-	return linked_item_append(append_to, data);
-}
-
-/**
- * Return new start item of chain
- */
-struct linked_item* linked_item_remove(struct linked_item *remove, struct linked_item *start) {
-	struct linked_item *last = NULL;
-	struct linked_item *curr = start;
-	while( curr != NULL ) {
-		if( curr == remove ) {
-			if( last != NULL ) {
-				last->next = remove->next;
-				return start;
-			} else {
-				return remove->next;
-			}
-		}
-		last = curr;
-		curr = curr->next;
-	}
-	return start;
+void linked_item_remove(void *remove) {
+	__linked_item_remove(remove);
 }
 
 
 /**
  * Free memory of whole chain
  */
-void linked_item_free(struct linked_item *start) {
+void __linked_item_free(struct linked_item *start, void (*free_linked_item)(void* item)) {
 	if( start == NULL ) {
 		return;
 	}
 
-	if( start->data != NULL ) {
-		free(start->data);
+	if( free_linked_item != NULL ) {
+		(*free_linked_item)(start);
 	}
 
 	if( start->next != NULL ) {    
-		linked_item_free(start->next);
+		__linked_item_free(start->next, free_linked_item);
 	}
 
 	free(start);
+}
+
+void linked_item_free(void *start, void (*free_linked_item)(void* item)) {
+	__linked_item_free(start, free_linked_item);
 }
 
 
 /**
  * Return new start item of chain
  */
-struct linked_item* linked_item_sort(struct linked_item *start, int (*compare_function)(struct linked_item *a, struct linked_item *b)) {
+void* __linked_item_sort(struct linked_item *start, int (*compare_function)(void *a, void *b)) {
 
 	if (start == NULL) {
 		return start;
@@ -188,11 +167,10 @@ struct linked_item* linked_item_sort(struct linked_item *start, int (*compare_fu
 
 				if( comp > 0 ) {
 					if( last == start ) {
-						start = linked_item_remove(curr, start);
-					} else {
-						linked_item_remove(curr, last);
+						start = curr;
 					}
-					start = linked_item_insert_before(curr, last, start);
+					linked_item_remove(last);
+					linked_item_append(curr, last);
 					changed++;	
 				}
 			}
@@ -205,3 +183,6 @@ struct linked_item* linked_item_sort(struct linked_item *start, int (*compare_fu
 	return start;
 }
 
+void* linked_item_sort(void *start, int (*compare_function)(void *a, void *b)) {
+	return __linked_item_sort(start, compare_function);
+}

@@ -22,42 +22,43 @@
  * Author: christian c8121 de
  */
 
-#include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
-#include <sysexits.h>
+#include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <time.h>
 
-#include "lib/linked_items.c"
-#include "lib/html_convert.c"
+#include "../lib/linked_items.c"
+#include "../lib/html_convert.c"
 
-#define LINE_BUF_SIZE 512
-
+/**
+ * 
+ */
+void show_current(struct html_line *start) {
+	struct html_line *curr = start;
+	while( curr != NULL ) {
+		printf("%s", curr->s);
+		curr = (struct html_line *) curr->list.next;
+	}
+	printf("EOL\n");
+}
 
 /**
  * 
  */
 int main(int argc, char *argv[]) {
-	
-	printf("<!DOCTYPE html>\n");
-	printf("<html><head><style>*{font-family: sans-serif;}td{padding:4px;border-bottom:1px solid black}</style></head><body>\n");
 
-	char buf[LINE_BUF_SIZE];
-	while( fgets(buf, LINE_BUF_SIZE, stdin) != NULL ) {
-		html_append_text(buf);
-	}
+
+	html_append_text("Hello World\n");
 	html_finish();
+	show_current(html);
 	
-	struct html_line *i = html;
-	while( i != NULL ) {
-		printf("%s", i->s);
-		i = (struct html_line *) i->list.next;
-	}
-	
-	linked_item_free(html, NULL);
-	html = NULL;
-
-	printf("</body></html>");
+	html_append_text("Hello World\n");
+	html_append_text("A\tB\tC\n");
+	html_append_text(" 1\t[2]\t 3\n");
+	html_append_text("\t\t\n");
+	html_append_text("END...\n");
+	html_finish();
+	show_current(html);
 }
+
+

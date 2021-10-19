@@ -40,6 +40,14 @@
 #include "lib/smtp_socket_util.c"
 #include "lib/linked_items.c"
 
+#define MAX_LINE_SIZE 1024
+
+struct buffer_line {
+	struct linked_item list;
+	char s[MAX_LINE_SIZE];
+};
+
+
 char *command;
 char *smtpHost;
 int smtpPort;
@@ -55,7 +63,7 @@ int verbosity = 0;
 
 pthread_mutex_t handle_data_mutex;
 
-struct linked_item *buffer = NULL;
+struct buffer_line *buffer = NULL;
 int bufferMaxLines = 100;
 
 
@@ -113,10 +121,10 @@ int send_buffer() {
 		snprintf(buf, sizeof(buf), "\r\n");
 		write(socket, buf, strlen(buf));
 
-		struct linked_item *curr = buffer;
+		struct buffer_line *curr = buffer;
 		while( curr != NULL ) {
-			smtp_qp_write(socket, curr->data);
-			curr = curr->next;
+			smtp_qp_write(socket, curr->s);
+			curr = (struct buffer_line *) curr->list.next;
 		}
 
 		snprintf(buf, sizeof(buf), "\r\n.\r\n");
@@ -157,16 +165,16 @@ void handle_data(int force) {
 	if( force || linked_item_count(buffer) >= bufferMaxLines ) {
 
 		if( verbosity > 1 ) {
-			struct linked_item *out = buffer;
+			struct buffer_line *out = buffer;
 			while( out != NULL ) {
-				printf("SEND> %s", (char*)out->data);
-				out = out->next;
+				printf("SEND> %s", out->s);
+				out = (struct buffer_line *) out->list.next;
 			}
 		}
 
 		send_buffer();
 
-		linked_item_free(buffer);
+		linked_item_free(buffer, NULL);
 		buffer = NULL;
 	}
 
@@ -285,7 +293,7 @@ int main(int argc, char *argv[]) {
 		exit(EX_IOERR);
 	}
 
-	struct linked_item *readInto = NULL;
+	struct buffer_line *readInto = NULL;
 
 	char line[1024];
 	while( fgets(line, sizeof(line), cmd) ) {
@@ -297,17 +305,13 @@ int main(int argc, char *argv[]) {
 		pthread_mutex_lock(&handle_data_mutex);
 
 		if( buffer == NULL ) {
-			buffer = linked_item_create(NULL);
+			buffer = linked_item_create(NULL, sizeof(struct buffer_line));
 			readInto = buffer;
 		} else {
-			readInto = linked_item_create(readInto);
+			readInto = linked_item_create(readInto, sizeof(struct buffer_line));
 		}
 
-		readInto->next = NULL;
-
-		int len = strlen(line);
-		readInto->data = malloc(len+1);
-		strcpy(readInto->data, line);
+		strcpy(readInto->s, line);
 
 		pthread_mutex_unlock(&handle_data_mutex);
 

@@ -34,12 +34,11 @@ cd $BASE
 gcc -Wall -I./lib/liblmdb -o "$binDir/arp-scan-util" "$sourceDir/arp-scan-util.c" -llmdb
 gcc -Wall -I./lib/liblmdb -o "$binDir/arp-history" "$sourceDir/arp-history.c" -llmdb
 
-
 # ------------------------
 echo "Build exec-and-mail & httpd-exec"
 cd $BASE
 gcc -Wall -o "$binDir/exec-and-mail" "$sourceDir/exec-and-mail.c" -lpthread
-gcc -Wall -o "$binDir/httpd-exec" "$sourceDir/httpd-exec.c"
+#gcc -Wall -o "$binDir/httpd-exec" "$sourceDir/httpd-exec.c"
 
 # ------------------------
 echo "Build Hostwatch"
@@ -49,4 +48,4 @@ gcc -Wall -o "$binDir/hostwatch" "$sourceDir/hostwatch.c" -lpthread
 # ------------------------
 echo "Build snort-scan-util"
 cd $BASE
-gcc -g -Wall -o "$binDir/snort-scan-util" "$sourceDir/snort-scan-util.c" -lpthread
+gcc -Wall -o "$binDir/snort-scan-util" "$sourceDir/snort-scan-util.c" -lpthread

@@ -21,8 +21,16 @@
  * Very simple util to convert text to html
  */
 
-struct linked_item *html = NULL;
-struct linked_item *html_last = NULL;
+#define MAX_LINE_SIZE 1024
+
+struct html_line {
+	struct linked_item list;
+	char s[MAX_LINE_SIZE];
+};
+
+
+struct html_line *html = NULL;
+struct html_line *html_last = NULL;
 
 #define UNDEFINED 0
 #define TEXT 1
@@ -36,39 +44,37 @@ int html_curr_paragraph_type = UNDEFINED;
 /**
  * 
  */
-void _html_append(char *s, int max) {
+void __html_append(char *s, int max) {
 
 	if( html_last == NULL && html != NULL ) {
 		//Begin new conversion
-		linked_item_free(html);
+		linked_item_free(html, NULL);
 		html = NULL;
 	}
 
 	if( html == NULL ) {
-		html = linked_item_create(NULL);
+		html = linked_item_create(NULL, sizeof(struct html_line));
 		html_last = html;
 	} else {
-		html_last = linked_item_create(html_last);
+		html_last = linked_item_create(html_last, sizeof(struct html_line));
 	}
 	
 	if( max < 0 ) {
-		html_last->data = malloc(strlen(s)+1);
-		strcpy(html_last->data, s);
+		strcpy(html_last->s, s);
 	} else {
-		html_last->data = malloc(max+1);
-		memset(html_last->data, 0, max+1);
-		strncpy(html_last->data, s, max);
+		memset(html_last->s, 0, MAX_LINE_SIZE);
+		strncpy(html_last->s, s, max);
 	}
 }
 
 /**
  * 
  */
-void _html_finish_block() {
+void __html_finish_block() {
 	if( html_curr_paragraph_type == TEXT) {
-		_html_append("</p>", -1);
+		__html_append("</p>", -1);
 	}else if( html_curr_paragraph_type == TABLE) {
-		_html_append("</table>", -1);
+		__html_append("</table>", -1);
 	}
 }
 
@@ -83,40 +89,38 @@ void html_append_text(char *text) {
 
 		//TABLE line
 		if( html_curr_paragraph_type != TABLE ) {
-			_html_finish_block();
-			_html_append("<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">", -1);
+			__html_finish_block();
+			__html_append("<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">", -1);
 		}
 
 		html_curr_paragraph_type = TABLE;
-		_html_append("<tr><td>", -1);
+		__html_append("<tr><td>", -1);
 
 		char *s = text;
 		char *p = text;
 		while (p[0] != '\0') {
 			if( p[0] == '\t' ) {
-				if( s < p-1 ) {
-					_html_append(s, p-s);
-				}
-				_html_append("</td><td>", -1);
+				__html_append(s, p-s);
+				__html_append("</td><td>", -1);
 				s = p+1;
 			}
 			p++;
 		}
 		if( s < p-1 ) {
-			_html_append(s, -1);
+			__html_append(s, -1);
 		}
 
-		_html_append("</td></tr>", -1);
+		__html_append("</td></tr>", -1);
 	} else {
 
 		//TEXT line
 		if( html_curr_paragraph_type != TEXT ) {
-			_html_finish_block();
-			_html_append("<p>", -1);
+			__html_finish_block();
+			__html_append("<p>", -1);
 		}
 
 		html_curr_paragraph_type = TEXT;
-		_html_append(text, -1);
+		__html_append(text, -1);
 	}
 }
 
@@ -124,7 +128,7 @@ void html_append_text(char *text) {
  * 
  */
 void html_finish() {
-	_html_finish_block();
+	__html_finish_block();
 	html_last = NULL;
 	html_curr_paragraph_type = UNDEFINED;
 }

@@ -58,6 +58,7 @@ int server_port = 8003;
 int server_socket = 0;
 
 struct event_data {
+	struct linked_item list;
 	char host_src[255];
 	char host_dst[255];
 	int hit_count;
@@ -66,24 +67,29 @@ struct event_data {
 	int latest_prio;
 };
 
-struct linked_item *data = NULL;
+
+struct out_data {
+	struct linked_item list;
+	char s[512];
+};
+
+struct event_data *data = NULL;
 pthread_mutex_t update_data_mutex;
 
-struct linked_item *out = NULL;
+struct out_data *out = NULL;
 
 /**
  * 
  */
-struct linked_item* find_item(char *host_src, char *host_dst) {
-	struct linked_item *item = data;
+struct event_data* find_item(char *host_src, char *host_dst) {
+	struct event_data *item = data;
 	while (item != NULL) {
-		struct event_data *data = item->data;
-		if (strcmp(data->host_src, host_src) == 0) {
-			if (strcmp(data->host_dst, host_dst) == 0) {	
+		if (strcmp(item->host_src, host_src) == 0) {
+			if (strcmp(item->host_dst, host_dst) == 0) {	
 				return item;
 			}
 		}
-		item = item->next;
+		item = (struct event_data*) item->list.next;
 	}
 
 	return NULL;
@@ -92,21 +98,19 @@ struct linked_item* find_item(char *host_src, char *host_dst) {
 /**
  * 
  */
-struct linked_item* create_item(char *host_src, char *host_dst) {
+struct event_data* create_item(char *host_src, char *host_dst) {
 
-	struct linked_item *item = linked_item_create(linked_item_last(data));
+	struct event_data *item = linked_item_create(linked_item_last(data), sizeof(struct event_data));
 	if( data == NULL ) {
 		data = item;
 	}
 
-	item->data = malloc(sizeof(struct event_data));
-	struct event_data *data = (struct event_data*) item->data;
-	strcpy(data->host_src, host_src);
-	strcpy(data->host_dst, host_dst);
-	data->hit_count = 0;
-	data->latest_proto[0] = '\0';
-	data->latest_message[0] = '\0';
-	data->latest_prio = 99;
+	strcpy(item->host_src, host_src);
+	strcpy(item->host_dst, host_dst);
+	item->hit_count = 0;
+	item->latest_proto[0] = '\0';
+	item->latest_message[0] = '\0';
+	item->latest_prio = 99;
 
 	return item;
 }
@@ -155,39 +159,52 @@ void configure(int argc, char *argv[]) {
 /**
  * 
  */
+struct out_data* append_out(struct out_data *prev, char *s) {
+	struct out_data *item = linked_item_create(prev, sizeof(struct out_data));
+	strcpy(item->s, s);
+	return item;
+}
+
+/**
+ * 
+ */
 void create_out() {
 
 	if( out != NULL ) {
-		linked_item_free(out);
+		linked_item_free(out, NULL);
 	}
 
-	out = linked_item_appends(NULL, "SRC HOST\tDST HOST\tPROTO\n");
-	struct linked_item *curr_out = out;
-
-	struct linked_item *curr = data;
-	struct event_data *curr_data;
 	char buff[1048];
+
+	out = linked_item_create(NULL, sizeof(struct out_data));
+	time_t now = time(NULL);
+	sprintf(out->s, "Snort scan: current time=%s\n", asctime(localtime(&now)));
+
+	
+	struct out_data *curr_out = out;
+	curr_out = append_out(curr_out, "\n");
+	curr_out = append_out(curr_out, "SRC HOST\tDST HOST\tPROTO\n");
+
+	struct event_data *curr = data;
 	int num = 0;
 	while (curr != NULL && num < print_max_items) {
 
-		curr_data = (struct event_data*) curr->data;
+		sprintf(buff, "%s\t%s\t(%s)\n", curr->host_src, curr->host_dst, curr->latest_proto);
+		curr_out = append_out(curr_out, buff);
 
-		sprintf(buff, "%s\t%s\t(%s)\n", curr_data->host_src, curr_data->host_dst, curr_data->latest_proto);
-		curr_out = linked_item_appends(curr_out, buff);
+		sprintf(buff, "\tHits: %i\n", curr->hit_count);
+		curr_out = append_out(curr_out, buff);
 
-		sprintf(buff, "\tHits: %i\n", curr_data->hit_count);
-		curr_out = linked_item_appends(curr_out, buff);
+		sprintf(buff, "\t%s\n", curr->latest_message);
+		curr_out = append_out(curr_out, buff);
 
-		sprintf(buff, "\t%s\n", curr_data->latest_message);
-		curr_out = linked_item_appends(curr_out, buff);
-
-		curr = curr->next;
+		curr = (struct event_data *) curr->list.next;
 		num++;
 	}
 
-	curr_out = linked_item_appends(curr_out, "\n");
+	curr_out = append_out(curr_out, "\n");
 	sprintf(buff, "Count: %i\n", linked_item_count(data));
-	linked_item_appends(curr_out, buff);
+	append_out(curr_out, buff);
 }
 
 /**
@@ -207,10 +224,10 @@ void print_data() {
 
 	pthread_mutex_lock(&update_data_mutex);
 
-	struct linked_item *curr_out = out;
+	struct out_data *curr_out = out;
 	while (curr_out != NULL) {
-		printf("%s", (char*)curr_out->data);
-		curr_out = curr_out->next;
+		printf("%s", curr_out->s);
+		curr_out = (struct out_data *) curr_out->list.next;
 	}
 
 	pthread_mutex_unlock(&update_data_mutex);
@@ -219,9 +236,9 @@ void print_data() {
 /**
  * comparison of prio and hits, used by linked_item_sort
  */
-int compare(struct linked_item *a, struct linked_item *b) {
-	struct event_data *a_data = (struct event_data*) a->data;
-	struct event_data *b_data = (struct event_data*) b->data;
+int compare(void *a, void *b) {
+	struct event_data *a_data = a;
+	struct event_data *b_data = b;
 	unsigned long a_score = a_data->latest_prio * -100000 + a_data->hit_count;
 	unsigned long b_score = b_data->latest_prio * -100000 + b_data->hit_count;
 
@@ -255,19 +272,19 @@ void handle_request(int client_socket, struct sockaddr_in *client_address) {
 
 	pthread_mutex_lock(&update_data_mutex);
 
-	struct linked_item *curr_out = out;
+	struct out_data *curr_out = out;
 	while (curr_out != NULL) {
-		html_append_text((char*)curr_out->data);
-		curr_out = curr_out->next;
+		html_append_text(curr_out->s);
+		curr_out = (struct out_data*) curr_out->list.next;
 	}
 	html_finish();
 
-	struct linked_item *i = html;
+	struct html_line *i = html;
 	while( i != NULL ) {
-		send(client_socket, (char*)i->data, strlen(i->data), 0);
-		i = i->next;
+		send(client_socket, i->s, strlen(i->s), 0);
+		i = (struct html_line *)i->list.next;
 	}
-	linked_item_free(html);
+	linked_item_free(html, NULL);
 	html = NULL;
 
 
@@ -386,19 +403,17 @@ int main(int argc, char *argv[]) {
 
 			pthread_mutex_lock(&update_data_mutex);
 
-			struct linked_item *item;
-			struct event_data *item_data;
+			struct event_data *item;
 
 			item = find_item(host_src, host_dst);
 			if( item == NULL ) {
 				item = create_item(host_src, host_dst);
 			}
 
-			item_data = (struct event_data*) item->data;
-			strcpy(item_data->latest_proto, proto);
-			strcpy(item_data->latest_message, message);
-			item_data->hit_count++;
-			item_data->latest_prio = prio;
+			strcpy(item->latest_proto, proto);
+			strcpy(item->latest_message, message);
+			item->hit_count++;
+			item->latest_prio = prio;
 
 			data = linked_item_sort(data, &compare);
 
