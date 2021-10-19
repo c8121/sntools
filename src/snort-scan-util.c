@@ -253,7 +253,7 @@ void create_out() {
 
 	out = linked_item_create(NULL, sizeof(struct out_data));
 	time_t now = time(NULL);
-	sprintf(out->s, "Snort scan: current time=%s\n", asctime(localtime(&now)));
+	sprintf(out->s, "Snort scan: timespan=%i sec, current time=%s\n", timespan_seconds, asctime(localtime(&now)));
 
 
 	struct out_data *curr_out = out;
