@@ -125,7 +125,7 @@ void add_bytes(struct host_data *item, unsigned long b, time_t ts) {
 	struct byte_count *byte_count;
 	if( item->byte_count == NULL ) {
 		item->byte_count = linked_item_create(NULL, sizeof(struct byte_count));
-		byte_count = data->byte_count;
+		byte_count = item->byte_count;
 	} else {
 		byte_count = linked_item_create(linked_item_last(item->byte_count), sizeof(struct byte_count));
 	}
