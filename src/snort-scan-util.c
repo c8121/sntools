@@ -52,19 +52,26 @@ char *snort_conf = "/etc/snort/snort.conf";
 int print_max_items = 20;
 int strip_src_port = 0;
 int verbosity = 0;
+int timespan_seconds = 3600;
 
 char *server_ip = NULL;
 int server_port = 8003;
 int server_socket = 0;
 
+struct hit_count {
+	struct linked_item list;
+	time_t ts;
+	unsigned int hits;
+};
+
 struct event_data {
 	struct linked_item list;
 	char host_src[255];
 	char host_dst[255];
-	int hit_count;
 	char latest_proto[10];
 	char latest_message[1024];
 	int latest_prio;
+	struct hit_count *hit_count;
 };
 
 
@@ -107,12 +114,75 @@ struct event_data* create_item(char *host_src, char *host_dst) {
 
 	strcpy(item->host_src, host_src);
 	strcpy(item->host_dst, host_dst);
-	item->hit_count = 0;
 	item->latest_proto[0] = '\0';
 	item->latest_message[0] = '\0';
 	item->latest_prio = 99;
 
+	item->hit_count = NULL;
+
 	return item;
+}
+
+/**
+ * 
+ */
+void add_hit(struct event_data *item, int c, time_t ts) {
+
+	struct hit_count *hit_count;
+	if( item->hit_count == NULL ) {
+		item->hit_count = linked_item_create(NULL, sizeof(struct hit_count));
+		hit_count = item->hit_count;
+	} else {
+		hit_count = linked_item_create(linked_item_last(item->hit_count), sizeof(struct hit_count));
+	}
+
+	hit_count->hits = c;
+	hit_count->ts = ts;
+}
+
+/**
+ * 
+ */
+unsigned int sum_hits(struct event_data *item) {
+
+	if( item->hit_count == NULL ) {
+		return 0;
+	}
+
+	unsigned int sum = 0;
+	struct hit_count *curr = item->hit_count;
+	while( curr != NULL ) {
+		sum += curr->hits;
+		curr = (struct hit_count*) curr->list.next;
+	}
+
+	return sum;
+}
+
+/**
+ * 
+ */
+void remove_hit_count_before(time_t before) {
+
+	struct event_data *item = data;
+	while (item != NULL) {
+		struct hit_count *hit_count = item->hit_count;
+		while( hit_count != NULL ) {
+			if( hit_count->ts < before ) {
+				linked_item_remove(hit_count);
+				if( item->hit_count == hit_count ) {
+					item->hit_count = (struct hit_count*) hit_count->list.next;
+				}
+				void *tmp = hit_count->list.next;
+				free(hit_count);
+				hit_count = tmp;
+			} else {
+				return; //items appear in order, it is safe to exit
+			}
+		}
+
+		item = (struct event_data *) item->list.next;
+	}
 }
 
 /**
@@ -120,7 +190,7 @@ struct event_data* create_item(char *host_src, char *host_dst) {
  */
 void configure(int argc, char *argv[]) {
 
-	const char *options = "i:h:s:p:vm";
+	const char *options = "i:h:s:p:t:vm";
 	int c;
 
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -147,6 +217,11 @@ void configure(int argc, char *argv[]) {
 
 		case 'p':
 			server_port = atoi(optarg);
+			break;
+
+		case 't':
+			timespan_seconds = atoi(optarg);
+			printf("Will keep data %i seconds\n", timespan_seconds);
 			break;
 
 		case 'v':
@@ -180,7 +255,7 @@ void create_out() {
 	time_t now = time(NULL);
 	sprintf(out->s, "Snort scan: current time=%s\n", asctime(localtime(&now)));
 
-	
+
 	struct out_data *curr_out = out;
 	curr_out = append_out(curr_out, "\n");
 	curr_out = append_out(curr_out, "SRC HOST\tDST HOST\tPROTO\n");
@@ -192,7 +267,7 @@ void create_out() {
 		sprintf(buff, "%s\t%s\t(%s)\n", curr->host_src, curr->host_dst, curr->latest_proto);
 		curr_out = append_out(curr_out, buff);
 
-		sprintf(buff, "\tHits: %i\n", curr->hit_count);
+		sprintf(buff, "\tHits: %i\n", sum_hits(curr));
 		curr_out = append_out(curr_out, buff);
 
 		sprintf(buff, "\t%s\n", curr->latest_message);
@@ -239,8 +314,8 @@ void print_data() {
 int compare(void *a, void *b) {
 	struct event_data *a_data = a;
 	struct event_data *b_data = b;
-	unsigned long a_score = a_data->latest_prio * -100000 + a_data->hit_count;
-	unsigned long b_score = b_data->latest_prio * -100000 + b_data->hit_count;
+	unsigned long a_score = a_data->latest_prio * -100000 + sum_hits(a_data);
+	unsigned long b_score = b_data->latest_prio * -100000 + sum_hits(b_data);
 
 	return b_score > a_score ? 1 : 0;
 }
@@ -369,6 +444,7 @@ int main(int argc, char *argv[]) {
 		//                                                                                                                                                         ^ p2
 		//                                                                                                                  ^ p3
 
+		time_t now = time(NULL);
 
 		char *p0 = strstr(line, "{");
 		char *p1 = strstr(line, "}");
@@ -412,8 +488,10 @@ int main(int argc, char *argv[]) {
 
 			strcpy(item->latest_proto, proto);
 			strcpy(item->latest_message, message);
-			item->hit_count++;
 			item->latest_prio = prio;
+
+			remove_hit_count_before(now - timespan_seconds);
+			add_hit(item, 1, now);
 
 			data = linked_item_sort(data, &compare);
 

@@ -93,6 +93,7 @@ i             | Interface name
 h             | Home network
 m             | Strip port from source host
 v             | Enable verbose mode
+t             | Timespan in seconds to be observed (default: 3600)
 
 
 ## Bash scripts
