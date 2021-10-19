@@ -171,7 +171,7 @@ void remove_byte_count_before(time_t before) {
 				free(byte_count);
 				byte_count = tmp;
 			} else {
-				byte_count = (struct byte_count*) byte_count->list.next;
+				return; //items appear in order, it is safe to exit
 			}
 		}
 
