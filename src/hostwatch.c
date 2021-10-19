@@ -71,6 +71,7 @@ struct host_data {
 	char host_a[255];
 	char host_b[255];
 	struct byte_count *byte_count;
+	unsigned long byte_sum;
 };
 
 struct out_data {
@@ -113,6 +114,7 @@ struct host_data* create_item(char *host_a, char *host_b) {
 	strcpy(item->host_a, host_a);
 	strcpy(item->host_b, host_b);
 	item->byte_count = NULL;
+	item->byte_sum = 0;
 
 	return item;
 }
@@ -137,20 +139,19 @@ void add_bytes(struct host_data *item, unsigned long b, time_t ts) {
 /**
  * 
  */
-unsigned long sum_bytes(struct host_data *item) {
+void update_bytes_sum(struct host_data *item) {
 
 	if( item->byte_count == NULL ) {
-		return 0;
+		item->byte_sum = 0;
+		return;
 	}
 
-	unsigned long sum = 0;
+	item->byte_sum = 0;
 	struct byte_count *curr = item->byte_count;
 	while( curr != NULL ) {
-		sum += curr->bytes;
+		item->byte_sum += curr->bytes;
 		curr = (struct byte_count*) curr->list.next;
 	}
-
-	return sum;
 }
 
 /**
@@ -283,9 +284,9 @@ void create_out() {
 	while (curr != NULL && num < print_max_items) {
 
 		if( human_readable ) {
-			readable_bytes(sum_bytes(curr), bytes_s);
+			readable_bytes(curr->byte_sum, bytes_s);
 		} else {
-			sprintf(bytes_s, "%lu", sum_bytes(curr));
+			sprintf(bytes_s, "%lu", curr->byte_sum);
 		}
 
 		sprintf(buff, "%s\t%s\t%s (%i)\n", curr->host_a, curr->host_b, bytes_s, linked_item_count(curr->byte_count));
@@ -336,7 +337,7 @@ int compare(void *a, void *b) {
 	struct host_data *ha = (struct host_data*) a;
 	struct host_data *hb = (struct host_data*) b;
 
-	if( sum_bytes(hb) > sum_bytes(ha) )
+	if( hb->byte_sum > ha->byte_sum )
 		return 1;
 	else
 		return 0;
@@ -523,6 +524,7 @@ int main(int argc, char *argv[]) {
 
 						remove_byte_count_before(now - timespan_seconds);
 						add_bytes(item, bytes, now);
+						update_bytes_sum(item);
 						if (verbosity > 0) {
 							printf("Update: %s -> %s\n", item->host_a, item->host_b);
 						}
