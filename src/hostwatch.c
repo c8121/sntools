@@ -456,6 +456,7 @@ int main(int argc, char *argv[]) {
 			printf("tcpdump> %s", line);
 		}
 
+		//15:29:29.821214 IP6 fe80::...:bbe4.5353 > ff02::...5353: 0 [2a] [2q] TXT (QM)? HP HP PageWide MFP P57750 @ cups._ipp._tcp.local. TXT (QM)? HP PageWide P55250 [ADB2E4]._ipp._tcp.local. (1170)
 		//16:59:04.793423 IP 192.168.1.25.443 > 192.168.1.140.48246: Flags [P.], seq 241:544, ack 750, win 353, length 303
 		//                  ^ p0
 		//                                   ^ p1
@@ -478,6 +479,16 @@ int main(int argc, char *argv[]) {
 
 					char *p3 = strstr(p2, "length ");
 					if (p3 != NULL) {
+						p3 += 7;
+					} else {
+						//IP6 (...)
+						p3 = strrchr(p2, '(');
+						if( p3 != NULL ) {
+							p3 += 1;
+						}
+					}
+					
+					if (p3 != NULL) {
 
 						memset(fromAddress, 0, sizeof(fromAddress));
 						strncpy(fromAddress, p0 + 1, p1 - p0 - 1);
@@ -490,7 +501,7 @@ int main(int argc, char *argv[]) {
 							strip_port(toAddress);
 						}
 
-						unsigned long bytes = atoi(p3 + 7);
+						unsigned long bytes = atoi(p3);
 
 						if (verbosity > 1) {
 							printf("%s -> %s: %lub\n", fromAddress, toAddress,
