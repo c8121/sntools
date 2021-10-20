@@ -314,10 +314,10 @@ void print_data() {
 int compare(void *a, void *b) {
 	struct event_data *a_data = a;
 	struct event_data *b_data = b;
-	unsigned long a_score = a_data->latest_prio * -100000 + sum_hits(a_data);
-	unsigned long b_score = b_data->latest_prio * -100000 + sum_hits(b_data);
+	unsigned long a_score = 100000 + (a_data->latest_prio * 10000) + sum_hits(a_data);
+	unsigned long b_score = 100000 + (b_data->latest_prio * 10000) + sum_hits(b_data);
 
-	return b_score > a_score ? 1 : 0;
+	return b_score > a_score ? 0 : 1;
 }
 
 
