@@ -166,8 +166,10 @@ void remove_hit_count_before(time_t before) {
 
 	struct event_data *item = data;
 	while (item != NULL) {
+		
 		struct hit_count *hit_count = item->hit_count;
 		while( hit_count != NULL ) {
+			
 			if( hit_count->ts < before ) {
 				linked_item_remove(hit_count);
 				if( item->hit_count == hit_count ) {
@@ -264,6 +266,8 @@ void create_out() {
 	int num = 0;
 	while (curr != NULL && num < print_max_items) {
 
+		printf("Create out %p", curr);
+		
 		sprintf(buff, "%s\t%s\t(%s)\n", curr->host_src, curr->host_dst, curr->latest_proto);
 		curr_out = append_out(curr_out, buff);
 
@@ -312,12 +316,13 @@ void print_data() {
  * comparison of prio and hits, used by linked_item_sort
  */
 int compare(void *a, void *b) {
+	
 	struct event_data *a_data = a;
 	struct event_data *b_data = b;
 	unsigned long a_score = 100000 + (a_data->latest_prio * 10000) + sum_hits(a_data);
 	unsigned long b_score = 100000 + (b_data->latest_prio * 10000) + sum_hits(b_data);
 
-	return b_score > a_score ? 0 : 1;
+	return a_score > b_score ? 1 : 0;
 }
 
 
@@ -434,7 +439,7 @@ int main(int argc, char *argv[]) {
 	while (fgets(line, sizeof(line), cmd)) {
 
 		if (verbosity > 0) {
-			printf("snort> %s", line);
+			printf("snort> %s\n", line);
 		}
 
 		//CONSOLE mode output (-A console):
@@ -508,7 +513,7 @@ int main(int argc, char *argv[]) {
 	if (feof(cmd)) {
 		pclose(cmd);
 	} else {
-		fprintf(stderr, "Broken pipe: %s", cmdString);
+		fprintf(stderr, "Broken pipe: %s\n", cmdString);
 	}
 
 }
