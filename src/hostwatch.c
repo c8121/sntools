@@ -141,12 +141,11 @@ void add_bytes(struct host_data *item, unsigned long b, time_t ts) {
  */
 void update_bytes_sum(struct host_data *item) {
 
+	item->byte_sum = 0;
 	if( item->byte_count == NULL ) {
-		item->byte_sum = 0;
 		return;
 	}
 
-	item->byte_sum = 0;
 	struct byte_count *curr = item->byte_count;
 	while( curr != NULL ) {
 		item->byte_sum += curr->bytes;
@@ -157,27 +156,57 @@ void update_bytes_sum(struct host_data *item) {
 /**
  * 
  */
-void remove_byte_count_before(time_t before) {
+int remove_byte_count_before(struct host_data *item, time_t before) {
+
+	int removed = 0;
+	
+	struct byte_count *byte_count = item->byte_count;
+	while( byte_count != NULL ) {
+		if( byte_count->ts < before ) {
+			linked_item_remove(byte_count);
+			if( item->byte_count == byte_count ) {
+				item->byte_count = (struct byte_count*) byte_count->list.next;
+			}
+			void *tmp = byte_count->list.next;
+			free(byte_count);
+			byte_count = tmp;
+			removed++;
+		} else {
+			return removed; //items appear in order, it is safe to exit
+		}
+	}
+	
+	return removed;
+}
+
+/**
+ * 
+ */
+void cleanup_host_data(time_t before) {
 
 	struct host_data *item = data;
 	while (item != NULL) {
-		struct byte_count *byte_count = item->byte_count;
-		while( byte_count != NULL ) {
-			if( byte_count->ts < before ) {
-				linked_item_remove(byte_count);
-				if( item->byte_count == byte_count ) {
-					item->byte_count = (struct byte_count*) byte_count->list.next;
-				}
-				void *tmp = byte_count->list.next;
-				free(byte_count);
-				byte_count = tmp;
-			} else {
-				return; //items appear in order, it is safe to exit
-			}
+		
+		if( remove_byte_count_before(item, before) > 0 ) {
+			update_bytes_sum(item);
 		}
 
 		item = (struct host_data *) item->list.next;
 	}
+}
+
+/**
+ * comparison of bytes, used by linked_item_sort
+ */
+int compare(void *a, void *b) {
+
+	struct host_data *ha = (struct host_data*) a;
+	struct host_data *hb = (struct host_data*) b;
+
+	if( hb->byte_sum > ha->byte_sum )
+		return 1;
+	else
+		return 0;
 }
 
 
@@ -268,10 +297,14 @@ void create_out() {
 		linked_item_free(out, NULL);
 	}
 
+	time_t now = time(NULL);
+	cleanup_host_data(now - timespan_seconds);
+	
+	data = linked_item_sort(data, &compare);
+	
 	char buff[1024];
 
 	out = linked_item_create(NULL, sizeof(struct out_data));
-	time_t now = time(NULL);
 	sprintf(out->s, "Hostwatch: timespan=%i sec, current time=%s\n", timespan_seconds, asctime(localtime(&now)));
 
 	struct out_data *curr_out = out;
@@ -319,6 +352,8 @@ void print_data() {
 
 	pthread_mutex_lock(&update_data_mutex);
 
+	create_out();
+
 	struct out_data *curr_out = out;
 	while (curr_out != NULL) {
 		printf("%s", curr_out->s);
@@ -329,19 +364,7 @@ void print_data() {
 }
 
 
-/**
- * comparison of bytes, used by linked_item_sort
- */
-int compare(void *a, void *b) {
 
-	struct host_data *ha = (struct host_data*) a;
-	struct host_data *hb = (struct host_data*) b;
-
-	if( hb->byte_sum > ha->byte_sum )
-		return 1;
-	else
-		return 0;
-}
 
 
 /**
@@ -372,6 +395,8 @@ void handle_request(int client_socket, struct sockaddr_in *client_address) {
 	send(client_socket, s, strlen(s), 0);
 
 	pthread_mutex_lock(&update_data_mutex);
+
+	create_out();
 
 	struct out_data *curr_out = out;
 	while (curr_out != NULL) {
@@ -488,7 +513,7 @@ int main(int argc, char *argv[]) {
 							p3 += 1;
 						}
 					}
-					
+
 					if (p3 != NULL) {
 
 						memset(fromAddress, 0, sizeof(fromAddress));
@@ -522,16 +547,12 @@ int main(int argc, char *argv[]) {
 							}
 						}
 
-						remove_byte_count_before(now - timespan_seconds);
+						remove_byte_count_before(item, now - timespan_seconds);
 						add_bytes(item, bytes, now);
 						update_bytes_sum(item);
 						if (verbosity > 0) {
 							printf("Update: %s -> %s\n", item->host_a, item->host_b);
 						}
-
-						data = linked_item_sort(data, &compare);
-
-						create_out();
 
 						pthread_mutex_unlock(&update_data_mutex);
 
