@@ -265,8 +265,6 @@ void create_out() {
 	struct event_data *curr = data;
 	int num = 0;
 	while (curr != NULL && num < print_max_items) {
-
-		printf("Create out %p", curr);
 		
 		sprintf(buff, "%s\t%s\t(%s)\n", curr->host_src, curr->host_dst, curr->latest_proto);
 		curr_out = append_out(curr_out, buff);
