@@ -121,19 +121,20 @@ void linked_item_remove(void *remove) {
  * Free memory of whole chain
  */
 void __linked_item_free(struct linked_item *start, void (*free_linked_item)(void* item)) {
-	if( start == NULL ) {
-		return;
-	}
 
-	if( free_linked_item != NULL ) {
-		(*free_linked_item)(start);
-	}
+	struct linked_item *curr = start;
+	struct linked_item *free_item;
+	while( curr != NULL ) {
 
-	if( start->next != NULL ) {    
-		__linked_item_free(start->next, free_linked_item);
-	}
+		free_item = curr;
+		curr = curr->next;
 
-	free(start);
+		if( free_linked_item != NULL ) {
+			(*free_linked_item)(free_item);
+		}
+
+		free(free_item);
+	}
 }
 
 void linked_item_free(void *start, void (*free_linked_item)(void* item)) {
